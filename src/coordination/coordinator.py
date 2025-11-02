@@ -60,6 +60,35 @@ class WorkflowCoordinator:
         self.format_converter = FormatConverterAgent(rate_limiter=self.rate_limiter)
         self.cross_referencer = CrossReferencer()
     
+    def _generate_technical_doc(self, req_summary, project_id):
+        """Helper for parallel technical doc generation"""
+        return self.technical_agent.generate_and_save(
+            requirements_summary=req_summary,
+            output_filename="technical_spec.md",
+            project_id=project_id,
+            context_manager=self.context_manager
+        )
+    
+    def _generate_stakeholder_doc(self, req_summary, pm_path, project_id):
+        """Helper for parallel stakeholder doc generation"""
+        pm_summary = self._get_summary_from_file(pm_path)
+        return self.stakeholder_agent.generate_and_save(
+            requirements_summary=req_summary,
+            pm_summary=pm_summary,
+            output_filename="stakeholder_summary.md",
+            project_id=project_id,
+            context_manager=self.context_manager
+        )
+    
+    def _generate_user_doc(self, req_summary, project_id):
+        """Helper for parallel user doc generation"""
+        return self.user_agent.generate_and_save(
+            requirements_summary=req_summary,
+            output_filename="user_guide.md",
+            project_id=project_id,
+            context_manager=self.context_manager
+        )
+    
     def generate_all_docs(self, user_idea: str, project_id: Optional[str] = None) -> Dict:
         """
         Generate all documentation types from a user idea
@@ -213,18 +242,6 @@ class WorkflowCoordinator:
             results["status"]["stakeholder_documentation"] = "complete"
             print()
             
-            # Step 11: User Documentation Agent
-            print("👤 Step 11: Generating User Documentation...")
-            print("-" * 60)
-            user_path = self.user_agent.generate_and_save(
-                requirements_summary=req_summary,
-                output_filename="user_guide.md",
-                project_id=project_id,
-                context_manager=self.context_manager
-            )
-            results["files"]["user_documentation"] = user_path
-            results["status"]["user_documentation"] = "complete"
-            print()
             
             # Step 12: Test Documentation Agent
             print("🧪 Step 12: Generating Test Documentation...")
