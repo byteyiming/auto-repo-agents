@@ -19,6 +19,8 @@ from src.agents.test_documentation_agent import TestDocumentationAgent
 from src.agents.quality_reviewer_agent import QualityReviewerAgent
 from src.agents.format_converter_agent import FormatConverterAgent
 from src.utils.file_manager import FileManager
+from src.utils.cross_referencer import CrossReferencer
+from src.utils.parallel_executor import ParallelExecutor, TaskStatus
 from src.rate_limit.queue_manager import RequestQueue
 
 

@@ -1,74 +1,371 @@
-<html><body>## Project Overview<br>
-<br>
-This project aims to develop a simple and intuitive task management application (referred to as "TaskMaster") to help users organize and track their tasks efficiently. TaskMaster will provide a user-friendly interface for creating, prioritizing, assigning due dates, and marking tasks as complete. The application will be accessible via a web browser and designed to be used by individuals and small teams. The primary goal is to provide a straightforward alternative to complex project management software, focusing on core task management functionalities.<br>
-<br>
-## Core Features<br>
-<br>
-*   **Task Creation:**<br>
-    *   Users should be able to easily create new tasks with a title, description, and optional due date.<br>
-    *   Tasks should be able to be categorized using tags or labels.<br>
-    *   Users should be able to assign tasks to themselves or other users (if team functionality is enabled).<br>
-*   **Task Prioritization:**<br>
-    *   Users should be able to assign a priority level (e.g., High, Medium, Low) to each task.<br>
-    *   Tasks should be sortable by priority.<br>
-*   **Due Date Management:**<br>
-    *   Users should be able to set a due date for each task.<br>
-    *   The application should display tasks approaching or past their due date prominently.<br>
-    *   Optional: Send reminders to users about upcoming due dates.<br>
-*   **Task Completion:**<br>
-    *   Users should be able to mark tasks as complete.<br>
-    *   Completed tasks should be moved to a separate "Completed" section or visually distinguished from active tasks.<br>
-    *   Users should be able to view a history of completed tasks.<br>
-*   **Task Filtering and Sorting:**<br>
-    *   Users should be able to filter tasks based on various criteria (e.g., priority, due date, assignee, tag/label, status).<br>
-    *   Users should be able to sort tasks based on various criteria (e.g., priority, due date, creation date).<br>
-*   **User Authentication:**<br>
-    *   Users should be able to create an account and log in securely.<br>
-    *   Password reset functionality should be available.<br>
-*   **Team Collaboration (Optional - Stretch Goal):**<br>
-    *   Users should be able to create teams or groups.<br>
-    *   Tasks can be assigned to team members.<br>
-    *   Team members can view and update tasks assigned to the team.<br>
-    *   Communication features (e.g., comments on tasks) can be added.<br>
-<br>
-## Technical Requirements<br>
-<br>
-*   **Platform:** Web-based application accessible via modern web browsers (Chrome, Firefox, Safari, Edge).<br>
-*   **Technology Stack:**<br>
-    *   Frontend: React or Vue.js for a responsive user interface.<br>
-    *   Backend: Node.js with Express.js or Python with Django/Flask for API development.<br>
-    *   Database: PostgreSQL or MongoDB for data storage.<br>
-*   **Security:**<br>
-    *   Secure password storage using hashing and salting.<br>
-    *   Protection against common web vulnerabilities (e.g., XSS, CSRF).<br>
-    *   Data encryption in transit (HTTPS).<br>
-*   **Scalability:** The application should be designed to handle a growing number of users and tasks.<br>
-*   **API:** A well-defined API should be available for future integrations.<br>
-*   **Deployment:** The application should be deployable on cloud platforms like AWS, Google Cloud, or Azure.<br>
-*   **Responsiveness:** The user interface should be responsive and adapt to different screen sizes (desktop, tablet, mobile).<br>
-<br>
-## User Personas<br>
-<br>
-*   **Individual User (Sarah):** A student or professional who needs a simple tool to organize their personal tasks, assignments, and appointments. Sarah values ease of use and wants to quickly add, prioritize, and track tasks. She is not interested in complex project management features. She needs reminders to keep her on track.<br>
-*   **Small Team Leader (David):** A team leader who needs to assign tasks to team members and track their progress. David needs to see the status of all tasks assigned to his team and wants to ensure that deadlines are met. He needs a central place to manage tasks.<br>
-*   **Freelancer (Emily):** A freelancer who manages multiple projects and needs to track tasks for each client. Emily needs to categorize tasks by project and track the time spent on each task. She needs to prioritize based on client deadlines.<br>
-<br>
-## Business Objectives<br>
-<br>
-*   **Acquire a user base of 1000 active users within the first 6 months.** This indicates successful adoption of the application.<br>
-*   **Achieve a user satisfaction rating of 4.5 out of 5 based on user feedback and reviews.** This measures the quality and usability of the application.<br>
-*   **Increase user engagement by having users log in at least 3 times per week.** This demonstrates the application's value in daily task management.<br>
-*   **Reduce user churn by providing regular updates and improvements based on user feedback.** Continuous improvement is crucial for retaining users.<br>
-*   **Generate revenue through a freemium model (optional), offering premium features for a subscription fee.** This can be a future objective for sustainability.<br>
-<br>
-## Constraints and Assumptions<br>
-<br>
-*   **Development Time:** The project must be completed within a 3-month timeframe.<br>
-*   **Budget:** The development budget is limited to \$5,000.<br>
-*   **Team Size:** The development team consists of 2 developers.<br>
-*   **User Adoption:** It is assumed that users are familiar with basic task management concepts.<br>
-*   **Third-Party Integrations:** Initial development will not include integrations with other applications (e.g., calendars, email). These can be considered in future iterations.<br>
-*   **Scope:** The initial scope is limited to core task management features. Advanced features like time tracking, Gantt charts, and resource management are excluded.<br>
-*   **Hosting:** Hosting costs are not included in the initial budget and will be addressed separately.<br>
-*   **Availability:** The application will be available 24/7 with an expected uptime of 99%.<br>
-</body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.8;
+            color: #333;
+            background-color: #fff;
+        }
+        h1 { font-size: 2.5em; margin: 1em 0 0.5em; color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 0.3em; }
+        h2 { font-size: 2em; margin: 1.5em 0 0.5em; color: #34495e; border-bottom: 2px solid #95a5a6; padding-bottom: 0.3em; }
+        h3 { font-size: 1.5em; margin: 1.2em 0 0.5em; color: #555; }
+        h4, h5, h6 { margin: 1em 0 0.5em; color: #666; }
+        p { margin: 1em 0; text-align: justify; }
+        code {
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 4px solid #3498db;
+            margin: 1em 0;
+        }
+        pre code { background-color: transparent; padding: 0; color: #333; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1.5em 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        ul, ol { margin: 1em 0; padding-left: 2em; }
+        li { margin: 0.5em 0; }
+        blockquote {
+            border-left: 4px solid #3498db;
+            padding-left: 1em;
+            margin: 1em 0;
+            color: #666;
+            font-style: italic;
+        }
+        a { color: #3498db; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        @media print {
+            body { max-width: 100%; padding: 0; }
+            h1, h2, h3 { page-break-after: avoid; }
+        }
+    </style>
+</head>
+<body>
+<div class="codehilite"><pre><span></span><code><span class="gh"># Technical Specification Document: Test Idea Application</span>
+
+This document outlines the technical specifications for the &quot;Test Idea&quot; application, covering system architecture, technical stack, database design, API design, security considerations, and deployment architecture.
+
+<span class="gu">## 1. System Architecture</span>
+
+<span class="gu">### High-level architecture overview</span>
+
+The &quot;Test Idea&quot; application will be a three-tier architecture consisting of:
+
+<span class="k">*</span><span class="w"> </span>  <span class="gs">**Presentation Tier (Client):**</span> User interface (UI) built using React.js, responsible for user interaction and displaying data.
+<span class="k">*</span><span class="w"> </span>  <span class="gs">**Application Tier (API):**</span> RESTful API built using Node.js with Express.js, handling business logic, data processing, and API requests.
+<span class="k">*</span><span class="w"> </span>  <span class="gs">**Data Tier (Database):**</span> PostgreSQL database for persistent data storage.
+</code></pre></div>
+
+<p>+---------------------+      +---------------------+      +---------------------+
+| Presentation Tier   | &lt;---&gt; | Application Tier    | &lt;---&gt; | Data Tier           |
+| (React.js)          |      | (Node.js/Express.js)|      | (PostgreSQL)        |
++---------------------+      +---------------------+      +---------------------+</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">### System components and their interactions</span>
+
+<span class="mf">1.</span><span class="w">  </span><span class="o">**</span><span class="k">User</span><span class="w"> </span><span class="n">Interface</span><span class="w"> </span><span class="p">(</span><span class="n">React</span><span class="p">.</span><span class="n">js</span><span class="p">)</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Handles</span><span class="w"> </span><span class="k">user</span><span class="w"> </span><span class="k">authentication</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">authorization</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Sends</span><span class="w"> </span><span class="n">API</span><span class="w"> </span><span class="n">requests</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">Application</span><span class="w"> </span><span class="n">Tier</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Renders</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">received</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">API</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Manages</span><span class="w"> </span><span class="k">user</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="n">cookies</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="k">local</span><span class="w"> </span><span class="k">storage</span><span class="p">.</span>
+
+<span class="mf">2.</span><span class="w">  </span><span class="o">**</span><span class="n">API</span><span class="w"> </span><span class="p">(</span><span class="n">Node</span><span class="p">.</span><span class="n">js</span><span class="o">/</span><span class="n">Express</span><span class="p">.</span><span class="n">js</span><span class="p">)</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Receives</span><span class="w"> </span><span class="n">requests</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">UI</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Authenticates</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">authorizes</span><span class="w"> </span><span class="n">users</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Processes</span><span class="w"> </span><span class="n">requests</span><span class="p">,</span><span class="w"> </span><span class="n">including</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="k">validation</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">business</span><span class="w"> </span><span class="n">logic</span><span class="w"> </span><span class="n">execution</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Interacts</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">database</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">retrieve</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">store</span><span class="w"> </span><span class="k">data</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="k">Returns</span><span class="w"> </span><span class="n">responses</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">UI</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="kt">JSON</span><span class="w"> </span><span class="k">format</span><span class="p">.</span>
+
+<span class="mf">3.</span><span class="w">  </span><span class="o">**</span><span class="k">Database</span><span class="w"> </span><span class="p">(</span><span class="n">PostgreSQL</span><span class="p">)</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Stores</span><span class="w"> </span><span class="n">persistent</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">including</span><span class="w"> </span><span class="k">user</span><span class="w"> </span><span class="n">accounts</span><span class="p">,</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="n">ideas</span><span class="p">,</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">related</span><span class="w"> </span><span class="n">information</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Provides</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">access</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">manipulation</span><span class="w"> </span><span class="n">capabilities</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">API</span><span class="p">.</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Enforces</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">integrity</span><span class="w"> </span><span class="n">through</span><span class="w"> </span><span class="n">constraints</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">relationships</span><span class="p">.</span>
+
+<span class="c1">### Technology stack selection</span>
+
+<span class="n">The</span><span class="w"> </span><span class="k">following</span><span class="w"> </span><span class="n">technology</span><span class="w"> </span><span class="n">stack</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="n">been</span><span class="w"> </span><span class="n">selected</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="s2">&quot;Test Idea&quot;</span><span class="w"> </span><span class="n">application</span><span class="o">:</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Frontend</span><span class="o">:**</span><span class="w"> </span><span class="n">React</span><span class="p">.</span><span class="n">js</span><span class="p">,</span><span class="w"> </span><span class="n">Redux</span><span class="w"> </span><span class="p">(</span><span class="k">for</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="n">management</span><span class="p">),</span><span class="w"> </span><span class="n">Axios</span><span class="w"> </span><span class="p">(</span><span class="k">for</span><span class="w"> </span><span class="n">HTTP</span><span class="w"> </span><span class="n">requests</span><span class="p">)</span>
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Backend</span><span class="o">:**</span><span class="w"> </span><span class="n">Node</span><span class="p">.</span><span class="n">js</span><span class="p">,</span><span class="w"> </span><span class="n">Express</span><span class="p">.</span><span class="n">js</span><span class="p">,</span><span class="w"> </span><span class="n">JWT</span><span class="w"> </span><span class="p">(</span><span class="k">for</span><span class="w"> </span><span class="k">authentication</span><span class="p">),</span><span class="w"> </span><span class="n">Sequelize</span><span class="w"> </span><span class="p">(</span><span class="n">ORM</span><span class="p">)</span>
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="k">Database</span><span class="o">:**</span><span class="w"> </span><span class="n">PostgreSQL</span>
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Infrastructure</span><span class="o">:**</span><span class="w"> </span><span class="n">AWS</span><span class="w"> </span><span class="p">(</span><span class="n">Elastic</span><span class="w"> </span><span class="n">Beanstalk</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">deployment</span><span class="p">,</span><span class="w"> </span><span class="n">RDS</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="k">database</span><span class="p">)</span>
+
+<span class="c1">### Architecture patterns and design decisions</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">RESTful</span><span class="w"> </span><span class="n">API</span><span class="o">:**</span><span class="w"> </span><span class="n">The</span><span class="w"> </span><span class="n">application</span><span class="w"> </span><span class="n">tier</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">expose</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">RESTful</span><span class="w"> </span><span class="n">API</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">communication</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">UI</span><span class="p">.</span>
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Microservices</span><span class="w"> </span><span class="p">(</span><span class="n">Potential</span><span class="w"> </span><span class="n">Future</span><span class="p">)</span><span class="o">:**</span><span class="w"> </span><span class="n">The</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">scaled</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">microservices</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">application</span><span class="w"> </span><span class="n">grows</span><span class="w"> </span><span class="n">significantly</span><span class="p">.</span><span class="w"> </span><span class="k">For</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">initial</span><span class="w"> </span><span class="n">version</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">monolithic</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">simplicity</span><span class="p">.</span>
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">ORM</span><span class="w"> </span><span class="p">(</span><span class="n">Sequelize</span><span class="p">)</span><span class="o">:**</span><span class="w"> </span><span class="n">An</span><span class="w"> </span><span class="n">ORM</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">interact</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">database</span><span class="p">,</span><span class="w"> </span><span class="n">simplifying</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">access</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">management</span><span class="p">.</span>
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">JWT</span><span class="w"> </span><span class="k">Authentication</span><span class="o">:**</span><span class="w"> </span><span class="kt">JSON</span><span class="w"> </span><span class="n">Web</span><span class="w"> </span><span class="n">Tokens</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">secure</span><span class="w"> </span><span class="k">authentication</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">authorization</span><span class="p">.</span>
+
+<span class="c1">## 2. Technical Stack</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Programming</span><span class="w"> </span><span class="n">languages</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">JavaScript</span><span class="w"> </span><span class="p">(</span><span class="n">Frontend</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">Backend</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="k">SQL</span><span class="w"> </span><span class="p">(</span><span class="k">Database</span><span class="p">)</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Frameworks</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">libraries</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">React</span><span class="p">.</span><span class="n">js</span><span class="w"> </span><span class="p">(</span><span class="n">Frontend</span><span class="w"> </span><span class="n">UI</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Redux</span><span class="w"> </span><span class="p">(</span><span class="n">Frontend</span><span class="w"> </span><span class="n">State</span><span class="w"> </span><span class="n">Management</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Axios</span><span class="w"> </span><span class="p">(</span><span class="n">Frontend</span><span class="w"> </span><span class="n">HTTP</span><span class="w"> </span><span class="k">Client</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Node</span><span class="p">.</span><span class="n">js</span><span class="w"> </span><span class="p">(</span><span class="n">Backend</span><span class="w"> </span><span class="n">Runtime</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Express</span><span class="p">.</span><span class="n">js</span><span class="w"> </span><span class="p">(</span><span class="n">Backend</span><span class="w"> </span><span class="n">Web</span><span class="w"> </span><span class="n">Framework</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Sequelize</span><span class="w"> </span><span class="p">(</span><span class="n">Backend</span><span class="w"> </span><span class="n">ORM</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">jsonwebtoken</span><span class="w"> </span><span class="p">(</span><span class="n">Backend</span><span class="w"> </span><span class="k">Authentication</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">bcrypt</span><span class="w"> </span><span class="p">(</span><span class="n">Backend</span><span class="w"> </span><span class="k">Password</span><span class="w"> </span><span class="n">Hashing</span><span class="p">)</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="k">Database</span><span class="w"> </span><span class="n">systems</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">PostgreSQL</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Infrastructure</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">hosting</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">AWS</span><span class="w"> </span><span class="p">(</span><span class="n">Elastic</span><span class="w"> </span><span class="n">Beanstalk</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">application</span><span class="w"> </span><span class="n">deployment</span><span class="p">,</span><span class="w"> </span><span class="n">RDS</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">PostgreSQL</span><span class="w"> </span><span class="k">database</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Docker</span><span class="w"> </span><span class="p">(</span><span class="k">For</span><span class="w"> </span><span class="n">containerization</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">deployment</span><span class="p">)</span>
+
+<span class="o">*</span><span class="w">   </span><span class="o">**</span><span class="n">Development</span><span class="w"> </span><span class="n">tools</span><span class="o">:**</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Visual</span><span class="w"> </span><span class="n">Studio</span><span class="w"> </span><span class="k">Code</span><span class="w"> </span><span class="p">(</span><span class="n">IDE</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Git</span><span class="w"> </span><span class="p">(</span><span class="n">Version</span><span class="w"> </span><span class="n">Control</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">npm</span><span class="o">/</span><span class="n">yarn</span><span class="w"> </span><span class="p">(</span><span class="n">Package</span><span class="w"> </span><span class="n">Manager</span><span class="p">)</span>
+<span class="w">    </span><span class="o">*</span><span class="w">   </span><span class="n">Postman</span><span class="o">/</span><span class="n">Insomnia</span><span class="w"> </span><span class="p">(</span><span class="n">API</span><span class="w"> </span><span class="n">Testing</span><span class="p">)</span>
+
+<span class="c1">## 3. Database Design</span>
+
+<span class="c1">### Database schema overview</span>
+
+<span class="n">The</span><span class="w"> </span><span class="k">database</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">will</span><span class="w"> </span><span class="n">consist</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">following</span><span class="w"> </span><span class="k">tables</span><span class="o">:</span>
+
+<span class="o">*</span><span class="w">   </span><span class="n n-Quoted">`users`</span><span class="o">:</span><span class="w"> </span><span class="n">Stores</span><span class="w"> </span><span class="k">user</span><span class="w"> </span><span class="k">account</span><span class="w"> </span><span class="n">information</span><span class="p">.</span>
+<span class="o">*</span><span class="w">   </span><span class="n n-Quoted">`ideas`</span><span class="o">:</span><span class="w"> </span><span class="n">Stores</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="n">idea</span><span class="w"> </span><span class="n">information</span><span class="p">.</span>
+
+<span class="c1">### Key data models</span>
+
+<span class="o">**</span><span class="n">users</span><span class="w"> </span><span class="k">table</span><span class="o">:**</span>
+
+<span class="n n-Quoted">`</span><span class="n n-Quoted n-Quoted-Escape">``</span><span class="n n-Quoted">sql</span>
+<span class="n n-Quoted">CREATE TABLE users (</span>
+<span class="n n-Quoted">    id SERIAL PRIMARY KEY,</span>
+<span class="n n-Quoted">    username VARCHAR(255) UNIQUE NOT NULL,</span>
+<span class="n n-Quoted">    email VARCHAR(255) UNIQUE NOT NULL,</span>
+<span class="n n-Quoted">    password VARCHAR(255) NOT NULL,</span>
+<span class="n n-Quoted">    created_at TIMESTAMP DEFAULT NOW(),</span>
+<span class="n n-Quoted">    updated_at TIMESTAMP DEFAULT NOW()</span>
+<span class="n n-Quoted">);</span>
+</code></pre></div>
+
+<p><strong>ideas table:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">ideas</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">DELETE</span><span class="w"> </span><span class="k">CASCADE</span><span class="p">,</span>
+<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="n">updated_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span>
+<span class="p">);</span>
+</code></pre></div>
+
+<h3>Relationships and constraints</h3>
+<ul>
+<li>One-to-many relationship between <code>users</code> and <code>ideas</code> (one user can have multiple ideas).</li>
+<li>Foreign key constraint on <code>ideas.user_id</code> referencing <code>users.id</code> with <code>ON DELETE CASCADE</code> to ensure that deleting a user also deletes their associated ideas.</li>
+<li>Unique constraint on <code>users.username</code> and <code>users.email</code>.</li>
+<li><code>NOT NULL</code> constraints on required fields.</li>
+</ul>
+<h3>Indexing strategy (if applicable)</h3>
+<ul>
+<li>Index on <code>users.username</code> and <code>users.email</code> for faster user lookups.</li>
+<li>Index on <code>ideas.user_id</code> for efficient retrieval of ideas by user.</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_username</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">username</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_ideas_user_id</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">ideas</span><span class="w"> </span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+</code></pre></div>
+
+<h2>4. API Design</h2>
+<h3>API endpoints overview</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+<th>Request Body</th>
+<th>Response Body</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/users/register</code></td>
+<td>Register a new user.</td>
+<td><code>{ username, email, password }</code></td>
+<td><code>{ id, username, email }</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/users/login</code></td>
+<td>Authenticate a user and return a JWT.</td>
+<td><code>{ username, password }</code></td>
+<td><code>{ token }</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ideas</code></td>
+<td>Get all ideas (requires authentication).</td>
+<td>None</td>
+<td><code>[{ id, user_id, title, description, created_at, updated_at }]</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/ideas/:id</code></td>
+<td>Get a specific idea by ID (requires authentication).</td>
+<td>None</td>
+<td><code>{ id, user_id, title, description, created_at, updated_at }</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/ideas</code></td>
+<td>Create a new idea (requires authentication).</td>
+<td><code>{ title, description }</code></td>
+<td><code>{ id, user_id, title, description, created_at, updated_at }</code></td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/ideas/:id</code></td>
+<td>Update an existing idea (requires authentication).</td>
+<td><code>{ title, description }</code></td>
+<td><code>{ id, user_id, title, description, created_at, updated_at }</code></td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/ideas/:id</code></td>
+<td>Delete an idea (requires authentication).</td>
+<td>None</td>
+<td><code>{ message: "Idea deleted successfully" }</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Request/response formats</h3>
+<p>All API requests and responses will be in JSON format.</p>
+<p><strong>Example: POST /api/users/register Request</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;testuser&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;email&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;password123&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Example: GET /api/ideas Response</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;user_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;My First Idea&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;A great idea for testing!&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023-10-27T10:00:00.000Z&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;updated_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023-10-27T10:00:00.000Z&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<h3>Authentication and authorization</h3>
+<ul>
+<li><strong>Authentication:</strong> JWT (JSON Web Tokens) will be used for authentication.  Upon successful login, the server will issue a JWT to the client.</li>
+<li><strong>Authorization:</strong> The JWT will be included in the <code>Authorization</code> header of subsequent requests.  The server will verify the JWT to authorize access to protected resources.</li>
+<li><strong>User Roles (Future):</strong>  Role-based access control can be implemented in the future by adding a <code>role</code> field to the <code>users</code> table and including the role in the JWT.</li>
+</ul>
+<h3>Error handling</h3>
+<ul>
+<li>API endpoints will return appropriate HTTP status codes to indicate success or failure.</li>
+<li>Error responses will include a JSON object with an <code>error</code> field containing a descriptive error message.</li>
+</ul>
+<p><strong>Example Error Response:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Invalid credentials&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2>5. Security Considerations</h2>
+<h3>Security requirements</h3>
+<ul>
+<li>Protect user credentials (passwords) using strong hashing algorithms.</li>
+<li>Secure API endpoints using authentication and authorization mechanisms.</li>
+<li>Protect against common web vulnerabilities such as cross-site scripting (XSS) and SQL injection.</li>
+<li>Ensure data privacy and compliance with relevant regulations.</li>
+</ul>
+<h3>Authentication mechanisms</h3>
+<ul>
+<li>JWT (JSON Web Tokens) will be used for authentication.</li>
+<li>Passwords will be hashed using bcrypt before being stored in the database.</li>
+</ul>
+<h3>Data protection</h3>
+<ul>
+<li>Sensitive data (e.g., passwords) will be encrypted at rest and in transit.</li>
+<li>Regular backups will be performed to protect against data loss.</li>
+<li>Input validation will be implemented to prevent SQL injection attacks.</li>
+</ul>
+<h3>Security best practices</h3>
+<ul>
+<li>Follow secure coding practices.</li>
+<li>Regularly update software dependencies to patch security vulnerabilities.</li>
+<li>Implement a strong password policy.</li>
+<li>Monitor system logs for suspicious activity.</li>
+<li>Conduct regular security audits.</li>
+</ul>
+<h2>6. Deployment Architecture</h2>
+<h3>Deployment strategy</h3>
+<ul>
+<li>Docker containers will be used for packaging and deploying the application.</li>
+<li>AWS Elastic Beanstalk will be used for deploying the application to the cloud.</li>
+<li>Continuous integration and continuous deployment (CI/CD) will be implemented using Jenkins.</li>
+</ul>
+<h3>Infrastructure requirements</h3>
+<ul>
+<li>AWS account</li>
+<li>Elastic Beanstalk environment</li>
+<li>RDS instance for PostgreSQL database</li>
+<li>Domain name (optional)</li>
+</ul>
+<h3>Scaling considerations</h3>
+<ul>
+<li>Horizontal scaling can be achieved by adding more instances to the Elastic Beanstalk environment.</li>
+<li>Database scaling can be achieved by using RDS read replicas or by migrating to a larger RDS instance.</li>
+<li>Load balancing will be used to distribute traffic across multiple instances.</li>
+</ul>
+<h3>Monitoring and logging</h3>
+<ul>
+<li>AWS CloudWatch will be used for monitoring application performance and health.</li>
+<li>Application logs will be collected and analyzed to identify issues and trends.</li>
+<li>Alerts will be configured to notify administrators of critical events.</li>
+<li>Consider using a centralized logging system (e.g., ELK stack) for more advanced log analysis.
+```</li>
+</ul>
+</body>
+</html>
