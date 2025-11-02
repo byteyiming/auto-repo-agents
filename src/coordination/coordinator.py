@@ -45,6 +45,7 @@ class WorkflowCoordinator:
         """
         self.context_manager = context_manager or ContextManager()
         self.rate_limiter = rate_limiter or RequestQueue(max_rate=60, period=60)
+        self.file_manager = FileManager(base_dir="docs")
         
         # Initialize agents (shared rate limiter)
         self.requirements_analyst = RequirementsAnalyst(rate_limiter=self.rate_limiter)
@@ -57,6 +58,7 @@ class WorkflowCoordinator:
         self.test_agent = TestDocumentationAgent(rate_limiter=self.rate_limiter)
         self.quality_reviewer = QualityReviewerAgent(rate_limiter=self.rate_limiter)
         self.format_converter = FormatConverterAgent(rate_limiter=self.rate_limiter)
+        self.cross_referencer = CrossReferencer()
     
     def generate_all_docs(self, user_idea: str, project_id: Optional[str] = None) -> Dict:
         """
@@ -238,22 +240,88 @@ class WorkflowCoordinator:
             results["status"]["test_documentation"] = "complete"
             print()
             
-            # Step 13: Collect all documentation for quality review
-            print("📚 Step 13: Collecting all documentation for quality review...")
+            # Step 13: Collect all documentation for cross-referencing and quality review
+            print("📚 Step 13: Collecting all documentation...")
             print("-" * 60)
             all_documentation = {}
+            document_agent_types = {}
+            document_file_paths = {}
+            
+            # Map document types to agent types
+            doc_type_to_agent = {
+                "requirements": AgentType.REQUIREMENTS_ANALYST,
+                "pm_documentation": AgentType.PM_DOCUMENTATION,
+                "technical_documentation": AgentType.TECHNICAL_DOCUMENTATION,
+                "api_documentation": AgentType.API_DOCUMENTATION,
+                "developer_documentation": AgentType.DEVELOPER_DOCUMENTATION,
+                "stakeholder_documentation": AgentType.STAKEHOLDER_COMMUNICATION,
+                "user_documentation": AgentType.USER_DOCUMENTATION,
+                "test_documentation": AgentType.TEST_DOCUMENTATION
+            }
+            
             for doc_type, file_path in results["files"].items():
-                if file_path and doc_type != "quality_review":  # Don't include review itself
+                if file_path and doc_type != "quality_review" and doc_type != "format_conversions":
                     try:
                         from src.utils.file_manager import FileManager
                         file_manager = FileManager()
                         content = file_manager.read_file(file_path)
-                        all_documentation[doc_type] = content
+                        
+                        # Map to agent type if available
+                        agent_type = doc_type_to_agent.get(doc_type)
+                        if agent_type:
+                            all_documentation[agent_type] = content
+                            document_agent_types[doc_type] = agent_type
+                            document_file_paths[agent_type] = file_path
                     except Exception as e:
                         print(f"⚠️  Warning: Could not read {doc_type}: {e}")
             
-            print(f"✅ Collected {len(all_documentation)} documents for review")
+            print(f"✅ Collected {len(all_documentation)} documents")
             print()
+            
+            # Step 13.5: Add cross-references to all documents
+            print("🔗 Step 13.5: Adding cross-references between documents...")
+            print("-" * 60)
+            try:
+                referenced_docs = self.cross_referencer.create_cross_references(
+                    all_documentation,
+                    document_file_paths
+                )
+                
+                # Save cross-referenced documents back to files
+                updated_count = 0
+                for agent_type, referenced_content in referenced_docs.items():
+                    original_content = all_documentation.get(agent_type)
+                    if referenced_content != original_content:
+                        file_path = document_file_paths[agent_type]
+                        self.file_manager.write_file(Path(file_path).name, referenced_content)
+                        # Update all_documentation for quality review
+                        all_documentation[agent_type] = referenced_content
+                        updated_count += 1
+                
+                print(f"✅ Added cross-references to {updated_count} documents")
+                print()
+                
+                # Generate document index
+                print("📑 Generating document index...")
+                print("-" * 60)
+                try:
+                    index_content = self.cross_referencer.generate_document_index(
+                        all_documentation,
+                        document_file_paths,
+                        project_name=req_summary.get('project_overview', 'Project')[:50]
+                    )
+                    
+                    index_path = self.file_manager.write_file("index.md", index_content)
+                    results["files"]["document_index"] = index_path
+                    print(f"✅ Document index created: {index_path}")
+                    print()
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not generate index: {e}")
+                    print()
+                    
+            except Exception as e:
+                print(f"⚠️  Warning: Cross-referencing failed: {e}")
+                print()
             
             # Step 14: Quality Reviewer Agent
             print("⭐ Step 14: Running Quality Review...")
