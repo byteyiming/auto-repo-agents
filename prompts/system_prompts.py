@@ -2,6 +2,7 @@
 System Prompts Configuration
 All agent prompts centralized here for easy editing
 """
+from typing import Optional
 
 # Requirements Analyst Prompt
 REQUIREMENTS_ANALYST_PROMPT = """You are a Requirements Analyst specializing in extracting structured requirements from user ideas.
