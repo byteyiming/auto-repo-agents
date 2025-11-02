@@ -394,9 +394,11 @@ class FormatConverterAgent(BaseAgent):
             
             for fmt in formats:
                 try:
-                    base_name = Path(doc_name).stem if doc_name else "document").stem if isinstance(Path(doc_name if doc_name else "document"), Path) else str(doc_name).split('.')[0] if doc_name else "document"
-                    if not base_name or base_name == ".":
-                        base_name = str(doc_name).split('.')[0] if doc_name else "document"
+                    # Extract base name from doc_name (handle both string and Path-like)
+                    if doc_name:
+                        base_name = str(Path(doc_name).stem) if '.' in str(doc_name) else str(doc_name)
+                    else:
+                        base_name = "document"
                     output_filename = f"{base_name}.{fmt}"
                     
                     file_path = self.convert(
