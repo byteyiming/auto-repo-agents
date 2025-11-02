@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 
 from src.rate_limit.queue_manager import RequestQueue
+from src.utils.template_engine import get_template_engine
 from src.llm.base_provider import BaseLLMProvider
 from src.llm.provider_factory import ProviderFactory
 
