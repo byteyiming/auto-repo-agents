@@ -5,6 +5,7 @@ Uses OOP structure with BaseAgent inheritance
 from typing import Optional
 from src.agents.base_agent import BaseAgent
 from src.utils.file_manager import FileManager
+from src.utils.requirements_parser import RequirementsParser
 from src.rate_limit.queue_manager import RequestQueue
 from src.context.context_manager import ContextManager
 from src.context.shared_context import RequirementsDocument, AgentType, DocumentStatus, AgentOutput
@@ -63,7 +64,10 @@ class RequirementsAnalyst(BaseAgent):
         
         # Initialize file manager
         self.file_manager = file_manager or FileManager(base_dir="docs")
-        
+
+        # Initialize requirements parser
+        self.parser = RequirementsParser()
+
         # Context manager (optional, will be set when project_id is provided)
         self.context_manager: Optional[ContextManager] = None
         self.project_id: Optional[str] = None

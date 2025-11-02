@@ -90,8 +90,9 @@ class TestFormatConverterAgent:
         try:
             pdf_path = agent.html_to_pdf(html, "test.pdf")
             assert Path(pdf_path).exists()
-        except ImportError:
-            pytest.skip("PDF libraries not installed")
+        except (ImportError, OSError):
+            # OSError can occur on macOS if system libraries aren't installed
+            pytest.skip("PDF libraries not available (may need system libraries on macOS)")
     
     def test_markdown_to_docx(self, mock_llm_provider, file_manager):
         """Test Markdown to DOCX conversion"""
