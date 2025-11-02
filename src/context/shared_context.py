@@ -16,6 +16,10 @@ class AgentType(str, Enum):
     API_DOCUMENTATION = "api_documentation"
     DEVELOPER_DOCUMENTATION = "developer_documentation"
     STAKEHOLDER_COMMUNICATION = "stakeholder_communication"
+    QUALITY_REVIEWER = "quality_reviewer"
+    FORMAT_CONVERTER = "format_converter"
+    USER_DOCUMENTATION = "user_documentation"
+    TEST_DOCUMENTATION = "test_documentation"
 
 
 class DocumentStatus(str, Enum):

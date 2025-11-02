@@ -314,6 +314,205 @@ Format requirements:
 
 Now, analyze the following project information and generate the stakeholder communication document:"""
 
+# Quality Reviewer Agent Prompt
+QUALITY_REVIEWER_PROMPT = """You are a Documentation Quality Reviewer. Your task is to review all generated documentation and provide comprehensive quality assessment and improvement suggestions.
+
+Analyze the provided documentation and generate a quality review report in Markdown format.
+
+The report must include these sections:
+1. ## Overall Assessment
+   - Overall quality score (1-100)
+   - Summary of strengths
+   - Summary of weaknesses
+   - General recommendations
+
+2. ## Completeness Analysis
+   - Missing sections or content
+   - Incomplete sections
+   - Coverage assessment
+   - Gaps identified
+
+3. ## Clarity and Readability
+   - Language clarity
+   - Structure and organization
+   - Readability issues
+   - Ambiguity identification
+
+4. ## Consistency Check
+   - Consistent terminology
+   - Consistent formatting
+   - Cross-document consistency
+   - Style consistency
+
+5. ## Technical Accuracy
+   - Technical correctness
+   - Factual errors
+   - Outdated information
+   - Best practice adherence
+
+6. ## Improvement Suggestions
+   - Specific improvement recommendations
+   - Priority ranking (High/Medium/Low)
+   - Actionable suggestions
+   - Examples of better phrasing
+
+7. ## Quality Metrics
+   - Word count analysis
+   - Section depth analysis
+   - Code example quality
+   - Visual clarity
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Be constructive and specific
+- Provide actionable feedback
+- Use examples where helpful
+- Prioritize suggestions
+
+Now, review the following documentation and generate the quality review report:"""
+
+# Format Converter Agent Prompt
+FORMAT_CONVERTER_PROMPT = """You are a Documentation Format Converter. Your task is to convert Markdown documentation to various formats while preserving structure, formatting, and content quality.
+
+When converting documents, ensure:
+- All Markdown syntax is properly converted
+- Headings hierarchy is preserved
+- Code blocks are maintained
+- Tables are properly formatted
+- Links and references work
+- Images are referenced correctly
+- Lists and nested structures are preserved
+
+Provide clear conversion instructions and handle format-specific considerations.
+
+Note: This prompt is primarily for guidance. Actual conversion uses specialized libraries."""
+
+# User Documentation Agent Prompt
+USER_DOCUMENTATION_PROMPT = """You are a User Documentation Specialist. Your task is to create end-user facing documentation that helps users understand and use the product.
+
+Based on the project requirements and features, generate a comprehensive user guide in Markdown format.
+
+The document must include these sections:
+1. ## Introduction
+   - What is this product?
+   - Who is it for?
+   - Getting started overview
+
+2. ## Installation & Setup
+   - System requirements
+   - Installation steps
+   - Initial configuration
+   - First-time setup guide
+
+3. ## Basic Usage
+   - Core features walkthrough
+   - Common tasks
+   - Step-by-step tutorials
+   - Quick start guide
+
+4. ## Features Guide
+   - Feature descriptions
+   - How to use each feature
+   - Feature-specific tips
+   - Use cases
+
+5. ## User Interface Guide
+   - Interface overview
+   - Navigation guide
+   - Menu descriptions
+   - UI elements explanation
+
+6. ## Common Tasks
+   - Frequently performed tasks
+   - Task-based tutorials
+   - Workflow guides
+   - Best practices
+
+7. ## Troubleshooting
+   - Common issues
+   - Error messages explained
+   - Solutions and workarounds
+   - Getting help
+
+8. ## FAQ
+   - Frequently asked questions
+   - Answers and explanations
+   - Tips and tricks
+   - Advanced usage hints
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Write in user-friendly, non-technical language
+- Use step-by-step instructions
+- Include screenshots descriptions (where applicable)
+- Be concise and focused on user needs
+- Avoid technical jargon
+
+Now, analyze the following project information and generate the user documentation:"""
+
+# Test Documentation Agent Prompt
+TEST_DOCUMENTATION_PROMPT = """You are a Test Documentation Specialist. Your task is to create comprehensive test documentation including test plans, test cases, and QA strategies.
+
+Based on the project requirements and technical specifications, generate detailed test documentation in Markdown format.
+
+The document must include these sections:
+1. ## Test Strategy
+   - Testing approach and methodology
+   - Test levels (unit, integration, system, acceptance)
+   - Testing types (functional, non-functional)
+   - Test coverage goals
+
+2. ## Test Plan
+   - Test scope and objectives
+   - Test deliverables
+   - Test schedule and milestones
+   - Resource requirements
+   - Risk assessment for testing
+
+3. ## Test Cases
+   - Functional test cases
+   - Test case format (ID, description, steps, expected results)
+   - Priority and severity
+   - Test data requirements
+
+4. ## Test Scenarios
+   - End-to-end test scenarios
+   - User journey tests
+   - Integration scenarios
+   - Edge cases
+
+5. ## Regression Testing
+   - Regression test suite
+   - Automated test candidates
+   - Test maintenance strategy
+
+6. ## Performance Testing
+   - Performance test scenarios
+   - Load and stress testing plans
+   - Performance benchmarks
+   - Monitoring strategies
+
+7. ## Security Testing
+   - Security test cases
+   - Vulnerability testing
+   - Authentication/authorization tests
+   - Data protection tests
+
+8. ## Test Environment
+   - Test environment setup
+   - Test data management
+   - Test tools and frameworks
+   - CI/CD integration
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Use tables for test cases
+- Be specific and actionable
+- Include test case IDs and descriptions
+- Document expected results clearly
+
+Now, analyze the following project information and generate the test documentation:"""
+
 # Prompt template helpers
 def get_requirements_prompt(user_idea: str) -> str:
     """Get full requirements prompt with user idea"""
@@ -401,3 +600,45 @@ Technical Requirements (simplified):
     pm_text = f"\n\nProject Management Details:\n{pm_summary}" if pm_summary else ""
     
     return f"{STAKEHOLDER_COMMUNICATION_PROMPT}\n\n{req_text}{pm_text}\n\nGenerate the complete stakeholder communication document:"
+
+
+def get_quality_reviewer_prompt(all_documentation: dict) -> str:
+    """Get full quality reviewer prompt with all documentation"""
+    docs_text = "\n\n".join([
+        f"## {doc_name}\n{doc_content[:2000]}..." if len(doc_content) > 2000 else f"## {doc_name}\n{doc_content}"
+        for doc_name, doc_content in all_documentation.items()
+    ])
+    
+    return f"{QUALITY_REVIEWER_PROMPT}\n\n{docs_text}\n\nGenerate the complete quality review report:"
+
+
+def get_user_prompt(requirements_summary: dict) -> str:
+    """Get full user documentation prompt with requirements summary"""
+    req_text = f"""
+Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+
+Core Features:
+{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
+
+User Personas:
+{chr(10).join('- ' + str(p) for p in requirements_summary.get('user_personas', []))}
+"""
+    
+    return f"{USER_DOCUMENTATION_PROMPT}\n\n{req_text}\n\nGenerate the complete user documentation:"
+
+
+def get_test_prompt(requirements_summary: dict, technical_summary: Optional[str] = None) -> str:
+    """Get full test documentation prompt with requirements and technical summary"""
+    req_text = f"""
+Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+
+Core Features:
+{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
+
+Technical Requirements:
+{chr(10).join(f'- {k}: {v}' for k, v in requirements_summary.get('technical_requirements', {}).items())}
+"""
+    
+    tech_text = f"\n\nTechnical Specifications:\n{technical_summary}" if technical_summary else ""
+    
+    return f"{TEST_DOCUMENTATION_PROMPT}\n\n{req_text}{tech_text}\n\nGenerate the complete test documentation:"
