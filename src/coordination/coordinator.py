@@ -14,6 +14,10 @@ from src.agents.technical_documentation_agent import TechnicalDocumentationAgent
 from src.agents.api_documentation_agent import APIDocumentationAgent
 from src.agents.developer_documentation_agent import DeveloperDocumentationAgent
 from src.agents.stakeholder_communication_agent import StakeholderCommunicationAgent
+from src.agents.user_documentation_agent import UserDocumentationAgent
+from src.agents.test_documentation_agent import TestDocumentationAgent
+from src.agents.quality_reviewer_agent import QualityReviewerAgent
+from src.agents.format_converter_agent import FormatConverterAgent
 from src.rate_limit.queue_manager import RequestQueue
 
 
@@ -49,6 +53,10 @@ class WorkflowCoordinator:
         self.api_agent = APIDocumentationAgent(rate_limiter=self.rate_limiter)
         self.developer_agent = DeveloperDocumentationAgent(rate_limiter=self.rate_limiter)
         self.stakeholder_agent = StakeholderCommunicationAgent(rate_limiter=self.rate_limiter)
+        self.user_agent = UserDocumentationAgent(rate_limiter=self.rate_limiter)
+        self.test_agent = TestDocumentationAgent(rate_limiter=self.rate_limiter)
+        self.quality_reviewer = QualityReviewerAgent(rate_limiter=self.rate_limiter)
+        self.format_converter = FormatConverterAgent(rate_limiter=self.rate_limiter)
     
     def generate_all_docs(self, user_idea: str, project_id: Optional[str] = None) -> Dict:
         """
@@ -201,6 +209,81 @@ class WorkflowCoordinator:
             )
             results["files"]["stakeholder_documentation"] = stakeholder_path
             results["status"]["stakeholder_documentation"] = "complete"
+            print()
+            
+            # Step 11: User Documentation Agent
+            print("👤 Step 11: Generating User Documentation...")
+            print("-" * 60)
+            user_path = self.user_agent.generate_and_save(
+                requirements_summary=req_summary,
+                output_filename="user_guide.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["user_documentation"] = user_path
+            results["status"]["user_documentation"] = "complete"
+            print()
+            
+            # Step 12: Test Documentation Agent
+            print("🧪 Step 12: Generating Test Documentation...")
+            print("-" * 60)
+            test_path = self.test_agent.generate_and_save(
+                requirements_summary=req_summary,
+                technical_summary=technical_summary,
+                output_filename="test_plan.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["test_documentation"] = test_path
+            results["status"]["test_documentation"] = "complete"
+            print()
+            
+            # Step 13: Collect all documentation for quality review
+            print("📚 Step 13: Collecting all documentation for quality review...")
+            print("-" * 60)
+            all_documentation = {}
+            for doc_type, file_path in results["files"].items():
+                if file_path and doc_type != "quality_review":  # Don't include review itself
+                    try:
+                        from src.utils.file_manager import FileManager
+                        file_manager = FileManager()
+                        content = file_manager.read_file(file_path)
+                        all_documentation[doc_type] = content
+                    except Exception as e:
+                        print(f"⚠️  Warning: Could not read {doc_type}: {e}")
+            
+            print(f"✅ Collected {len(all_documentation)} documents for review")
+            print()
+            
+            # Step 14: Quality Reviewer Agent
+            print("⭐ Step 14: Running Quality Review...")
+            print("-" * 60)
+            quality_review_path = self.quality_reviewer.generate_and_save(
+                all_documentation=all_documentation,
+                output_filename="quality_review.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["quality_review"] = quality_review_path
+            results["status"]["quality_review"] = "complete"
+            print()
+            
+            # Step 15: Format Conversion (optional - convert to HTML)
+            print("🔄 Step 15: Converting documentation to HTML format...")
+            print("-" * 60)
+            try:
+                format_results = self.format_converter.convert_all_documents(
+                    documents=all_documentation,
+                    formats=["html"],  # Just HTML for now, can add PDF/DOCX later
+                    project_id=project_id,
+                    context_manager=self.context_manager
+                )
+                results["files"]["format_conversions"] = format_results
+                results["status"]["format_conversions"] = "complete"
+                print(f"✅ Converted {len(format_results)} documents to HTML")
+            except Exception as e:
+                print(f"⚠️  Warning: Format conversion skipped: {e}")
+                results["status"]["format_conversions"] = "skipped"
             print()
             
             # Summary

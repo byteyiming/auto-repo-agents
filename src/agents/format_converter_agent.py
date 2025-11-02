@@ -45,6 +45,18 @@ class FormatConverterAgent(BaseAgent):
         self.file_manager = file_manager or FileManager(base_dir="docs/formats")
         self.supported_formats = ["html", "pdf", "docx"]
     
+    def generate(self, markdown_content: str) -> str:
+        """
+        Generate method required by BaseAgent interface
+        
+        Args:
+            markdown_content: Markdown content (for consistency with other agents)
+        
+        Returns:
+            HTML representation of the markdown (default conversion)
+        """
+        return self.markdown_to_html(markdown_content)
+    
     def markdown_to_html(self, markdown_content: str) -> str:
         """
         Convert Markdown to HTML
