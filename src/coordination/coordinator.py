@@ -19,6 +19,7 @@ from src.agents.user_documentation_agent import UserDocumentationAgent
 from src.agents.test_documentation_agent import TestDocumentationAgent
 from src.agents.quality_reviewer_agent import QualityReviewerAgent
 from src.agents.format_converter_agent import FormatConverterAgent
+from src.agents.claude_cli_documentation_agent import ClaudeCLIDocumentationAgent
 from src.utils.file_manager import FileManager
 from src.utils.cross_referencer import CrossReferencer
 from src.utils.parallel_executor import ParallelExecutor, TaskStatus
@@ -62,6 +63,7 @@ class WorkflowCoordinator:
         self.test_agent = TestDocumentationAgent(rate_limiter=self.rate_limiter)
         self.quality_reviewer = QualityReviewerAgent(rate_limiter=self.rate_limiter)
         self.format_converter = FormatConverterAgent(rate_limiter=self.rate_limiter)
+        self.claude_cli_agent = ClaudeCLIDocumentationAgent(rate_limiter=self.rate_limiter)
         self.cross_referencer = CrossReferencer()
     
     def _generate_technical_doc(self, req_summary, project_id):
@@ -356,6 +358,22 @@ class WorkflowCoordinator:
             results["files"]["quality_review"] = quality_review_path
             results["status"]["quality_review"] = "complete"
             print()
+            
+            # Step 14.5: Generate Claude CLI Documentation
+            print("🤖 Step 14.5: Generating Claude CLI Documentation (claude.md)...")
+            print("-" * 60)
+            try:
+                claude_md_path = self.claude_cli_agent.generate_and_save(
+                    all_documentation=all_documentation,
+                    project_id=project_id,
+                    context_manager=self.context_manager
+                )
+                results["files"]["claude_cli_documentation"] = claude_md_path
+                results["status"]["claude_cli_documentation"] = "complete"
+                print()
+            except Exception as e:
+                print(f"⚠️  Warning: Claude CLI documentation generation failed: {e}")
+                print()
             
             # Step 15: Format Conversion (convert to HTML, PDF, DOCX)
             print("🔄 Step 15: Converting documentation to multiple formats...")

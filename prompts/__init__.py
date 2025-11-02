@@ -9,6 +9,7 @@ from prompts.system_prompts import (
     QUALITY_REVIEWER_PROMPT,
     USER_DOCUMENTATION_PROMPT,
     TEST_DOCUMENTATION_PROMPT,
+    CLAUDE_CLI_DOCUMENTATION_PROMPT,
     get_requirements_prompt,
     get_pm_prompt,
     get_technical_prompt,
@@ -17,7 +18,8 @@ from prompts.system_prompts import (
     get_stakeholder_prompt,
     get_quality_reviewer_prompt,
     get_user_prompt,
-    get_test_prompt
+    get_test_prompt,
+    get_claude_cli_prompt
 )
 
 __all__ = [
@@ -30,6 +32,7 @@ __all__ = [
     'QUALITY_REVIEWER_PROMPT',
     'USER_DOCUMENTATION_PROMPT',
     'TEST_DOCUMENTATION_PROMPT',
+    'CLAUDE_CLI_DOCUMENTATION_PROMPT',
     'get_requirements_prompt',
     'get_pm_prompt',
     'get_technical_prompt',
@@ -38,6 +41,7 @@ __all__ = [
     'get_stakeholder_prompt',
     'get_quality_reviewer_prompt',
     'get_user_prompt',
-    'get_test_prompt'
+    'get_test_prompt',
+    'get_claude_cli_prompt'
 ]
 

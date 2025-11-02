@@ -20,6 +20,7 @@ class AgentType(str, Enum):
     FORMAT_CONVERTER = "format_converter"
     USER_DOCUMENTATION = "user_documentation"
     TEST_DOCUMENTATION = "test_documentation"
+    CLAUDE_CLI_DOCUMENTATION = "claude_cli_documentation"
 
 
 class DocumentStatus(str, Enum):
