@@ -1,6 +1,6 @@
 # Current Status & Next Steps 🚀
 
-**Last Updated:** After All Enhancements (C, D, E, F, G)
+**Last Updated:** After Documentation Cleanup & Python Command Fixes
 
 ---
 
@@ -35,6 +35,7 @@
    - SQLite shared context
    - Rate limiting & caching
    - Professional code structure
+   - Clean documentation (minimal, essential files only)
 
 ---
 
@@ -43,9 +44,40 @@
 - **Test Coverage:** 82%
 - **Tests Passing:** 102
 - **Agents:** 10 operational
+- **Source Files:** 35 Python modules
+- **Test Files:** 22 test modules
 - **LLM Providers:** 2 (Gemini, OpenAI)
 - **Output Formats:** Markdown, HTML, PDF, DOCX
 - **Architecture:** Production-ready
+
+---
+
+## 📁 Project Structure (Clean & Minimal)
+
+```
+docu-gen/
+├── README.md                    # Main entry point
+├── CURRENT_STATUS.md            # This file
+├── LICENSE                      # License file
+├── src/                         # Source code (35 modules)
+│   ├── agents/                 # 12 agent files
+│   ├── context/                # Shared context (SQLite)
+│   ├── coordination/           # Workflow orchestration
+│   ├── llm/                    # LLM provider abstractions
+│   ├── quality/                # Quality checking
+│   ├── rate_limit/             # Rate limiting & caching
+│   ├── utils/                  # Utilities (7 files)
+│   └── web/                    # Web interface (FastAPI)
+├── tests/                      # Test suite (22 test modules)
+├── docs/                       # Generated documentation
+│   └── README.md              # Documentation index
+├── templates/                  # Document templates (Jinja2)
+├── prompts/                    # System prompts (editable)
+├── scripts/                    # Setup and utility scripts
+└── pyproject.toml              # Project configuration
+```
+
+**Documentation:** Only essential files kept (8 markdown files total)
 
 ---
 
@@ -55,10 +87,13 @@
 
 1. **Test with Real Projects**
    ```bash
-   # Start web interface
-   python -m src.web.app
-   # Or use CLI
-   python -c "from src.coordination.coordinator import WorkflowCoordinator; WorkflowCoordinator().generate_all_docs('Your idea')"
+   # Option 1: Activate virtual environment
+   source .venv/bin/activate
+   python3 -c "from src.coordination.coordinator import WorkflowCoordinator; WorkflowCoordinator().generate_all_docs('Your idea')"
+   
+   # Option 2: Use uv run (no activation needed)
+   uv run python -m src.web.app
+   # Then visit http://localhost:8000
    ```
 
 2. **Document Versioning** (if needed)
@@ -98,27 +133,35 @@
 
 ---
 
-## 🤔 AutoGen Comparison
-
-See `AUTOGEN_COMPARISON.md` for detailed analysis.
-
-**Quick Summary:**
-- **Current system** is better for focused documentation generation
-- **AutoGen** would be better for complex conversations, tool calling, human-in-loop
-- **Recommendation:** Keep current system (it's perfect for your use case)
-
----
-
 ## 💡 What Should You Do?
 
-### Option A: Use It Now (Recommended)
+### Option A: Use It Now (Recommended) ⭐
+
 1. Generate docs for your projects
 2. Test the web interface
 3. Share with team
 4. Gather feedback
 5. Iterate based on usage
 
+**Quick Start:**
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Start web interface
+python3 -m src.web.app
+# Visit http://localhost:8000
+
+# Or use CLI
+python3 -c "
+from src.coordination.coordinator import WorkflowCoordinator
+coordinator = WorkflowCoordinator()
+coordinator.generate_all_docs('Build a task management app')
+"
+```
+
 ### Option B: Deploy to Production
+
 1. Set up production environment
 2. Deploy web interface
 3. Configure API keys
@@ -126,6 +169,7 @@ See `AUTOGEN_COMPARISON.md` for detailed analysis.
 5. Create user guide
 
 ### Option C: Enhance Further
+
 1. Add version control
 2. Improve quality loop
 3. Add document search
@@ -138,11 +182,20 @@ See `AUTOGEN_COMPARISON.md` for detailed analysis.
 **You have a production-ready, fully-featured documentation generation system.**
 
 The system is:
-- ✅ Complete and tested
+- ✅ Complete and tested (102 tests, 82% coverage)
 - ✅ Feature-rich (all enhancements done)
 - ✅ Production-ready
-- ✅ Well-documented
+- ✅ Well-documented (clean, minimal docs)
 - ✅ Extensible
+- ✅ macOS compatible (python3 commands)
 
 **Next logical step:** **Use it!** Generate documentation for real projects and iterate based on actual needs.
 
+---
+
+## 📝 Recent Updates
+
+- ✅ **Documentation Cleanup:** Removed redundant markdown files, kept only essential ones
+- ✅ **Python Command Fixes:** Updated all commands to use `python3` for macOS compatibility
+- ✅ **README Updates:** Added virtual environment activation and `uv run` options
+- ✅ **Project Structure:** Clean and minimal, following best practices

@@ -60,6 +60,7 @@ docu-gen/
 │   └── web/               # Web interface (FastAPI)
 ├── tests/                 # Test suite (102 tests, 82% coverage)
 ├── docs/                  # Generated documentation
+│   └── README.md         # Documentation index
 ├── templates/             # Document templates (Jinja2)
 ├── prompts/               # System prompts (editable)
 ├── scripts/               # Setup and utility scripts
@@ -68,9 +69,8 @@ docu-gen/
 
 ## 📚 Documentation
 
-- **Current Status**: See [CURRENT_STATUS.md](CURRENT_STATUS.md)
-- **AutoGen Comparison**: See [AUTOGEN_COMPARISON.md](AUTOGEN_COMPARISON.md)
-- **Documentation Index**: See [docs/README.md](docs/README.md)
+- **Current Status**: See [CURRENT_STATUS.md](CURRENT_STATUS.md) for detailed status and next steps
+- **Documentation Index**: See [docs/README.md](docs/README.md) for generated documentation
 
 ## 🧪 Testing
 
