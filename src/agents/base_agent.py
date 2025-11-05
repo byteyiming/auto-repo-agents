@@ -11,6 +11,10 @@ from src.rate_limit.queue_manager import RequestQueue
 from src.utils.template_engine import get_template_engine
 from src.llm.base_provider import BaseLLMProvider
 from src.llm.provider_factory import ProviderFactory
+from src.utils.logger import get_logger
+from src.config.settings import get_settings
+
+logger = get_logger(__name__)
 
 
 class BaseAgent(ABC):
@@ -75,12 +79,17 @@ class BaseAgent(ABC):
             )
         
         # Initialize rate limiter (share across instances if provided)
-        self.rate_limiter = rate_limiter or RequestQueue(max_rate=60, period=60)
+        settings = get_settings()
+        self.rate_limiter = rate_limiter or RequestQueue(
+            max_rate=settings.rate_limit_per_minute, 
+            period=60
+        )
         
         # Agent metadata
         self.agent_name = self.__class__.__name__
         self.model_name = self.llm_provider.get_default_model()
         self.provider_name = self.llm_provider.get_provider_name()
+        logger.info(f"{self.agent_name} initialized with provider: {self.provider_name}, model: {self.model_name}")
     
     def _call_llm(
         self,
@@ -103,6 +112,9 @@ class BaseAgent(ABC):
         Returns:
             Model response text
         """
+        model_to_use = model or self.model_name
+        logger.debug(f"{self.agent_name} calling LLM (model: {model_to_use}, prompt length: {len(prompt)}, temperature: {temperature})")
+        
         def make_request():
             return self.llm_provider.generate(
                 prompt=prompt,
@@ -112,7 +124,53 @@ class BaseAgent(ABC):
                 **kwargs
             )
         
-        return self.rate_limiter.execute(make_request)
+        try:
+            response = self.rate_limiter.execute(make_request)
+            logger.info(f"{self.agent_name} LLM call completed (response length: {len(response)} characters)")
+            # Clean and validate response
+            cleaned_response = self._clean_llm_response(response)
+            return cleaned_response
+        except Exception as e:
+            logger.error(f"{self.agent_name} LLM call failed: {str(e)}", exc_info=True)
+            raise
+    
+    def _clean_llm_response(self, response: str) -> str:
+        """
+        Clean LLM response by removing markdown code blocks and extra formatting
+        
+        Args:
+            response: Raw LLM response
+            
+        Returns:
+            Cleaned response text
+        """
+        if not response:
+            return response
+        
+        # Remove markdown code block wrappers (```markdown ... ```)
+        cleaned = response.strip()
+        
+        # Check if response is wrapped in markdown code block
+        if cleaned.startswith("```"):
+            # Find the closing ```
+            lines = cleaned.split("\n")
+            if len(lines) > 1:
+                # Remove first line (```markdown or ```)
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                # Remove last line if it's ```
+                if len(lines) > 0 and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned = "\n".join(lines)
+        
+        # Remove any leading/trailing whitespace
+        cleaned = cleaned.strip()
+        
+        # Log if significant cleaning occurred
+        if len(response) != len(cleaned) or response != cleaned:
+            logger.debug(f"{self.agent_name} cleaned response (original: {len(response)} chars, cleaned: {len(cleaned)} chars)")
+        
+        return cleaned
     
     @abstractmethod
     def generate(self, input_data: str) -> str:

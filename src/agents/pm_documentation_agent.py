@@ -44,37 +44,34 @@ class PMDocumentationAgent(BaseAgent):
         
         self.file_manager = file_manager or FileManager(base_dir="docs/pm")
     
-    def generate(self, requirements_summary: dict) -> str:
+    def generate(self, requirements_summary: dict, project_charter_summary: Optional[str] = None) -> str:
         """
-        Generate PM documentation from requirements
+        Generate PM documentation from requirements and project charter
         
         Args:
             requirements_summary: Summary from Requirements Analyst
                 Should contain: user_idea, project_overview, core_features, technical_requirements
+            project_charter_summary: Optional Project Charter content (Level 1 output)
         
         Returns:
             Generated PM documentation (Markdown)
         """
         # Get prompt from centralized prompts config
-        full_prompt = get_pm_prompt(requirements_summary)
+        full_prompt = get_pm_prompt(requirements_summary, project_charter_summary)
         
-        print(f"🤖 {self.agent_name} is generating PM documentation...")
-        print("⏳ This may take a moment (rate limited)...")
         
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             pm_doc = self._call_llm(full_prompt)
-            print("✅ PM documentation generated!")
             return pm_doc
         except Exception as e:
-            print(f"❌ Error generating PM documentation: {e}")
             raise
     
     def generate_and_save(
         self,
         requirements_summary: dict,
+        project_charter_summary: Optional[str] = None,
         output_filename: str = "project_plan.md",
         project_id: Optional[str] = None,
         context_manager: Optional[ContextManager] = None
@@ -92,14 +89,12 @@ class PMDocumentationAgent(BaseAgent):
             Absolute path to saved file
         """
         # Generate documentation
-        pm_doc = self.generate(requirements_summary)
+        pm_doc = self.generate(requirements_summary, project_charter_summary)
         
         # Save to file
         try:
             file_path = self.file_manager.write_file(output_filename, pm_doc)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
             
             # Save to context if available
             if project_id and context_manager:
@@ -112,10 +107,8 @@ class PMDocumentationAgent(BaseAgent):
                     generated_at=datetime.now()
                 )
                 context_manager.save_agent_output(project_id, output)
-                print(f"✅ PM documentation saved to shared context (project: {project_id})")
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
             raise
 

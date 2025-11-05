@@ -61,18 +61,13 @@ class UserDocumentationAgent(BaseAgent):
         # Get prompt from centralized prompts config
         full_prompt = get_user_prompt(requirements_summary)
         
-        print(f"🤖 {self.agent_name} is generating user documentation...")
-        print("⏳ This may take a moment (rate limited)...")
         
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             user_doc = self._call_llm(full_prompt)
-            print("✅ User documentation generated!")
             return user_doc
         except Exception as e:
-            print(f"❌ Error generating user documentation: {e}")
             raise
     
     def generate_and_save(
@@ -101,8 +96,6 @@ class UserDocumentationAgent(BaseAgent):
         try:
             file_path = self.file_manager.write_file(output_filename, user_doc)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
             
             # Save to context if available
             if project_id and context_manager:
@@ -115,10 +108,8 @@ class UserDocumentationAgent(BaseAgent):
                     generated_at=datetime.now()
                 )
                 context_manager.save_agent_output(project_id, output)
-                print(f"✅ User documentation saved to shared context (project: {project_id})")
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
             raise
 

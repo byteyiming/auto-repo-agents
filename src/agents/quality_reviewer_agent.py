@@ -66,7 +66,8 @@ class QualityReviewerAgent(BaseAgent):
                 quality_result = self.quality_checker.check_quality(doc_content)
                 automated_scores[doc_name] = quality_result
             except Exception as e:
-                print(f"⚠️  Warning: Could not run quality check on {doc_name}: {e}")
+                # Skip quality check for this document if it fails
+                pass
         
         # Get prompt from centralized prompts config
         full_prompt = get_quality_reviewer_prompt(all_documentation)
@@ -82,18 +83,13 @@ class QualityReviewerAgent(BaseAgent):
             
             full_prompt += scores_summary + "\n\nConsider these automated scores in your review."
         
-        print(f"🤖 {self.agent_name} is reviewing all documentation...")
-        print("⏳ This may take a moment (rate limited)...")
         
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             review_report = self._call_llm(full_prompt)
-            print("✅ Quality review report generated!")
             return review_report
         except Exception as e:
-            print(f"❌ Error generating quality review: {e}")
             raise
     
     def generate_and_save(
@@ -122,8 +118,6 @@ class QualityReviewerAgent(BaseAgent):
         try:
             file_path = self.file_manager.write_file(output_filename, review_report)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
             
             # Save to context if available
             if project_id and context_manager:
@@ -136,10 +130,8 @@ class QualityReviewerAgent(BaseAgent):
                     generated_at=datetime.now()
                 )
                 context_manager.save_agent_output(project_id, output)
-                print(f"✅ Quality review saved to shared context (project: {project_id})")
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
             raise
 

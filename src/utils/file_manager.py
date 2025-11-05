@@ -4,6 +4,9 @@ Handles all file operations in an OOP style
 """
 from pathlib import Path
 from typing import Optional
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class FileManager:
@@ -18,6 +21,7 @@ class FileManager:
         """
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"FileManager initialized with base_dir: {self.base_dir.absolute()}")
     
     def write_file(self, filepath: str, content: str, encoding: str = "utf-8") -> str:
         """
@@ -42,12 +46,18 @@ class FileManager:
         
         # Create parent directories if needed
         path.parent.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Creating directories if needed: {path.parent}")
         
         # Write file
         try:
+            content_size = len(content.encode(encoding))
+            logger.info(f"Writing file: {path} (size: {content_size} bytes, encoding: {encoding})")
             path.write_text(content, encoding=encoding)
-            return str(path.absolute())
+            abs_path = str(path.absolute())
+            logger.info(f"File written successfully: {abs_path}")
+            return abs_path
         except Exception as e:
+            logger.error(f"Failed to write file {path}: {str(e)}", exc_info=True)
             raise IOError(f"Failed to write file {path}: {str(e)}")
     
     def read_file(self, filepath: str, encoding: str = "utf-8") -> str:
@@ -72,11 +82,16 @@ class FileManager:
             path = self.base_dir / path
         
         if not path.exists():
+            logger.warning(f"File not found: {path}")
             raise FileNotFoundError(f"File not found: {path}")
         
         try:
-            return path.read_text(encoding=encoding)
+            logger.debug(f"Reading file: {path} (encoding: {encoding})")
+            content = path.read_text(encoding=encoding)
+            logger.info(f"File read successfully: {path} (size: {len(content)} characters)")
+            return content
         except Exception as e:
+            logger.error(f"Failed to read file {path}: {str(e)}", exc_info=True)
             raise IOError(f"Failed to read file {path}: {str(e)}")
     
     def file_exists(self, filepath: str) -> bool:
@@ -92,7 +107,9 @@ class FileManager:
         path = Path(filepath)
         if not path.is_absolute():
             path = self.base_dir / path
-        return path.exists()
+        exists = path.exists()
+        logger.debug(f"Checking file existence: {path} -> {exists}")
+        return exists
     
     def get_file_size(self, filepath: str) -> int:
         """
@@ -112,9 +129,12 @@ class FileManager:
             path = self.base_dir / path
         
         if not path.exists():
+            logger.warning(f"File not found when getting size: {path}")
             raise FileNotFoundError(f"File not found: {path}")
         
-        return path.stat().st_size
+        size = path.stat().st_size
+        logger.debug(f"File size: {path} -> {size} bytes")
+        return size
     
     def set_base_dir(self, base_dir: str):
         """
@@ -123,6 +143,8 @@ class FileManager:
         Args:
             base_dir: New base directory path
         """
+        old_dir = self.base_dir
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"FileManager base directory changed: {old_dir} -> {self.base_dir.absolute()}")
 

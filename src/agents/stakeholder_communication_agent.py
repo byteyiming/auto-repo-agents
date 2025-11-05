@@ -65,18 +65,13 @@ class StakeholderCommunicationAgent(BaseAgent):
         # Get prompt from centralized prompts config
         full_prompt = get_stakeholder_prompt(requirements_summary, pm_summary)
         
-        print(f"🤖 {self.agent_name} is generating stakeholder documentation...")
-        print("⏳ This may take a moment (rate limited)...")
         
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             stakeholder_doc = self._call_llm(full_prompt)
-            print("✅ Stakeholder documentation generated!")
             return stakeholder_doc
         except Exception as e:
-            print(f"❌ Error generating stakeholder documentation: {e}")
             raise
     
     def generate_and_save(
@@ -107,8 +102,6 @@ class StakeholderCommunicationAgent(BaseAgent):
         try:
             file_path = self.file_manager.write_file(output_filename, stakeholder_doc)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
             
             # Save to context if available
             if project_id and context_manager:
@@ -121,10 +114,8 @@ class StakeholderCommunicationAgent(BaseAgent):
                     generated_at=datetime.now()
                 )
                 context_manager.save_agent_output(project_id, output)
-                print(f"✅ Stakeholder documentation saved to shared context (project: {project_id})")
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
             raise
 

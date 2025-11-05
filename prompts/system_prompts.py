@@ -68,17 +68,42 @@ The document must include these sections:
 
 Format requirements:
 - Use clear Markdown headings (## for main sections)
-- Use tables for timelines and resource breakdowns
+- Use tables for timelines and resource breakdowns with SPECIFIC dates, roles, and costs
 - Use bullet points for lists
 - Be realistic and professional
-- Include specific estimates where possible
+- Include specific estimates (durations in weeks/months, team sizes, budget ranges)
+- DO NOT just list requirements - create project plans with schedules and resource allocations
 
-Now, analyze the following project requirements and generate the project management document:"""
+CRITICAL: Create project management documents that can actually be used to manage the project. Include specific timelines, team structures, budget breakdowns, and risk mitigation plans based on the project scope.
+
+IMPORTANT OUTPUT FORMAT:
+- DO NOT wrap your response in markdown code blocks (no ```markdown)
+- DO NOT repeat the requirements document
+- Generate ONLY the project management content based on the Project Charter
+- Start directly with your document structure (e.g., "# Project Management Plan" or "## Project Timeline")
+
+Now, analyze the following project information and generate the project management document:"""
 
 # Technical Documentation Agent Prompt
 TECHNICAL_DOCUMENTATION_PROMPT = """You are a Technical Writer specializing in creating comprehensive technical documentation.
 
-Based on the project requirements, generate a detailed technical specification document in Markdown format.
+🚨 CRITICAL: Your task is to generate TECHNICAL SPECIFICATION with architecture and design decisions, NOT a requirements document.
+- DO NOT copy or repeat the requirements document content
+- Generate SPECIFIC technical architecture, technology stack, system components, and design patterns
+- Include actual technology choices (e.g., "Python 3.11 with FastAPI", "PostgreSQL 15", "React 18")
+- Design concrete system architecture with diagrams description
+- This is a TECHNICAL DESIGN document, not a requirements list
+- If you see requirements or user stories below, use them ONLY as reference to design the technical architecture
+
+Based on the project requirements, user stories, and project management plan, generate a detailed technical specification document in Markdown format.
+
+IMPORTANT INSTRUCTIONS:
+- DO NOT just repeat the requirements or project overview
+- You MUST design actual technical architecture with specific technologies
+- Design concrete database schemas with tables, fields, and relationships
+- Design API structure and endpoints (detailed design, not just overview)
+- Make specific technology stack recommendations with versions
+- Base technical decisions on the user stories and PM plan provided
 
 The document must include these sections:
 1. ## System Architecture
@@ -95,16 +120,19 @@ The document must include these sections:
    - Development tools
 
 3. ## Database Design
-   - Database schema overview
-   - Key data models
-   - Relationships and constraints
-   - Indexing strategy (if applicable)
+   - Database schema with SPECIFIC tables, columns, data types, and constraints
+   - Key data models with actual field definitions
+   - Relationships and foreign keys with specific table relationships
+   - Indexing strategy with specific indexes
+   - Provide at least 5-10 core database tables with full schema definitions
 
 4. ## API Design
-   - API endpoints overview
-   - Request/response formats
-   - Authentication and authorization
-   - Error handling
+   - API architecture pattern (REST, GraphQL, etc.) with rationale
+   - SPECIFIC API endpoints with paths, methods, and purposes (design 8-12 endpoints)
+   - Request/response formats with detailed data structures
+   - Authentication and authorization mechanisms with implementation details
+   - Error handling with specific error codes and formats
+   - API versioning strategy
 
 5. ## Security Considerations
    - Security requirements
@@ -120,17 +148,41 @@ The document must include these sections:
 
 Format requirements:
 - Use clear Markdown headings (## for main sections)
-- Use code blocks for technical specifications
+- Use code blocks for technical specifications (actual code, SQL schemas, JSON examples)
 - Use diagrams description (text-based) where helpful
-- Be specific and technical
-- Include examples where relevant
+- Be SPECIFIC and technical - include actual technology names, versions, configurations
+- Include concrete examples - database schemas, API endpoint designs, code snippets
+- DO NOT write generic documentation - write specific technical specifications
 
-Now, analyze the following project requirements and generate the technical specification document:"""
+CRITICAL: The technical specification must contain actionable, implementable technical designs. A developer should be able to use this document to start building the system. Include specific database table schemas, API endpoint definitions, technology versions, and architecture decisions.
+
+IMPORTANT OUTPUT FORMAT:
+- DO NOT wrap your response in markdown code blocks (no ```markdown)
+- DO NOT repeat the requirements document or user stories verbatim
+- Generate ONLY the technical specification content
+- Start directly with your document structure (e.g., "# Technical Specification" or "## System Architecture")
+
+Now, analyze the following project information and generate the SPECIFIC technical specification document:"""
 
 # API Documentation Agent Prompt
 API_DOCUMENTATION_PROMPT = """You are an API Documentation Specialist. Your task is to create comprehensive API documentation.
 
-Based on the project requirements and technical specifications, generate a detailed API documentation in Markdown format.
+🚨 CRITICAL: Your task is to generate API DOCUMENTATION with actual REST endpoints, NOT a requirements document.
+- DO NOT copy or repeat the requirements document content
+- Generate SPECIFIC API endpoints (GET, POST, PUT, DELETE) with paths, parameters, request/response examples
+- Include ACTUAL endpoint URLs (e.g., GET /api/v1/jobs, POST /api/v1/applications)
+- Include request/response schemas with actual JSON examples
+- This is an API REFERENCE document, not a requirements list
+- If you see requirements or technical specs below, use them ONLY as reference to design the API endpoints
+
+Based on the project requirements and technical specifications, generate a detailed API documentation in Markdown format with SPECIFIC API endpoints, request/response formats, and examples.
+
+IMPORTANT INSTRUCTIONS:
+- DO NOT just repeat the requirements or project overview
+- You MUST design actual REST API endpoints based on the core features
+- Each feature needs corresponding API endpoints (GET, POST, PUT, DELETE)
+- Provide real request/response examples with actual data structures
+- Base your API design on the technical architecture and database design from the technical specifications
 
 The document must include these sections:
 1. ## API Overview
@@ -146,16 +198,20 @@ The document must include these sections:
    - Token management
 
 3. ## Endpoints
+   You MUST create specific endpoints for EACH core feature mentioned in the requirements.
+   For example, if the project has user authentication, you need endpoints like POST /api/auth/login, POST /api/auth/register, etc.
+   If it has log ingestion, you need POST /api/logs/ingest, GET /api/logs/search, etc.
+   
    For each endpoint, document:
-   - **Method**: GET, POST, PUT, DELETE, etc.
-   - **Path**: Full endpoint path
-   - **Description**: What the endpoint does
-   - **Request Parameters**: Query params, path params, body params
-   - **Request Example**: Sample request with code
-   - **Response Format**: Response structure
-   - **Response Example**: Sample response
-   - **Error Codes**: Possible error responses
-   - **Status Codes**: HTTP status codes
+   - **Method**: GET, POST, PUT, DELETE, PATCH, etc.
+   - **Path**: Full endpoint path (e.g., /api/v1/users/{id})
+   - **Description**: What the endpoint does (be specific, not generic)
+   - **Request Parameters**: Query params, path params, body params with types and validation
+   - **Request Example**: Complete sample request with curl command and JSON body
+   - **Response Format**: Detailed response structure with field types
+   - **Response Example**: Complete sample response with actual data
+   - **Error Codes**: Specific error responses (400, 401, 404, 500, etc.)
+   - **Status Codes**: HTTP status codes this endpoint returns
 
 4. ## Data Models
    - Request/response schemas
@@ -182,10 +238,21 @@ Format requirements:
 - Use clear Markdown headings (## for main sections)
 - Use code blocks for all code examples
 - Use tables for parameter descriptions
-- Include curl examples for each endpoint
+- Include curl examples for EACH endpoint (not just one example)
 - Be comprehensive and developer-friendly
+- Create AT LEAST 8-12 specific endpoints based on the core features
+- Each endpoint must be fully documented with examples
+- DO NOT write generic documentation - write specific API endpoint documentation
 
-Now, analyze the following project information and generate the API documentation:"""
+CRITICAL: Review the technical specifications carefully. Extract the API design details, database schema, and system architecture. Then design concrete REST API endpoints that would actually implement the features described. Write documentation as if these APIs already exist and you're documenting them for developers to use.
+
+IMPORTANT OUTPUT FORMAT:
+- DO NOT wrap your response in markdown code blocks (no ```markdown)
+- DO NOT repeat the requirements document
+- Generate ONLY the API documentation content
+- Start directly with your document structure (e.g., "# API Documentation" or "## API Overview")
+
+Now, analyze the following project information and generate the SPECIFIC API documentation with real endpoints:"""
 
 # Developer Documentation Agent Prompt
 DEVELOPER_DOCUMENTATION_PROMPT = """You are a Developer Documentation Specialist. Your task is to create comprehensive developer-focused documentation.
@@ -390,6 +457,8 @@ Note: This prompt is primarily for guidance. Actual conversion uses specialized 
 # User Documentation Agent Prompt
 USER_DOCUMENTATION_PROMPT = """You are a User Documentation Specialist. Your task is to create end-user facing documentation that helps users understand and use the product.
 
+CRITICAL: Write user-facing guides with step-by-step instructions, not technical specifications. Focus on HOW users interact with the product, not the technical implementation details.
+
 Based on the project requirements and features, generate a comprehensive user guide in Markdown format.
 
 The document must include these sections:
@@ -443,10 +512,19 @@ The document must include these sections:
 Format requirements:
 - Use clear Markdown headings (## for main sections)
 - Write in user-friendly, non-technical language
-- Use step-by-step instructions
+- Use step-by-step instructions with actual user actions
 - Include screenshots descriptions (where applicable)
 - Be concise and focused on user needs
 - Avoid technical jargon
+- DO NOT repeat requirements - write user guides showing HOW to use features
+
+CRITICAL: Write from the USER's perspective. Show them how to accomplish tasks, not what the system does technically. For example, instead of "The system supports log ingestion", write "To upload logs, click the 'Upload Logs' button and select your log file."
+
+IMPORTANT OUTPUT FORMAT:
+- DO NOT wrap your response in markdown code blocks (no ```markdown)
+- DO NOT repeat the requirements document
+- Generate ONLY the user guide content
+- Start directly with your document structure (e.g., "# User Guide" or "## Introduction")
 
 Now, analyze the following project information and generate the user documentation:"""
 
@@ -519,67 +597,209 @@ def get_requirements_prompt(user_idea: str) -> str:
     return f"{REQUIREMENTS_ANALYST_PROMPT}\n\nUser Idea: {user_idea}\n\nGenerate the complete requirements document:"
 
 
-def get_pm_prompt(requirements_summary: dict) -> str:
-    """Get full PM prompt with requirements summary"""
+def get_pm_prompt(requirements_summary: dict, project_charter_summary: Optional[str] = None) -> str:
+    """Get full PM prompt with requirements summary and optional project charter"""
+    
+    # LEVEL 2: Must use Level 1 output (Project Charter) as PRIMARY source
+    if not project_charter_summary:
+        raise ValueError("Level 2 (PM Documentation) REQUIRES Level 1 (Project Charter) output. Cannot proceed without it.")
+    
+    context_text = f"""
+=== LEVEL 2: Product Management Documentation ===
+You are generating Level 2 documentation, which MUST be based on Level 1 (Project Charter) output.
+
+PRIMARY SOURCE - Level 1 Output (Project Charter):
+{project_charter_summary[:3000]}
+
+CRITICAL INSTRUCTIONS:
+1. Extract project objectives, timeline, budget, and stakeholder information from the Project Charter above
+2. Create SPECIFIC project management plans based on the business case
+3. DO NOT repeat requirements - use the Project Charter to create actionable PM plans
+4. Align timelines, resources, and budgets with the Project Charter
+
+Reference Information (for context only - DO NOT repeat):
+Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+"""
+    
+    return f"""{PM_DOCUMENTATION_PROMPT}
+
+{context_text}
+
+REMEMBER: You are Level 2. Use Level 1 (Project Charter) as your PRIMARY source. Generate the complete project management document based on the Charter:"""
+
+
+def get_technical_prompt(
+    requirements_summary: dict,
+    user_stories_summary: Optional[str] = None,
+    pm_summary: Optional[str] = None
+) -> str:
+    """Get full technical documentation prompt with requirements, user stories, and PM summaries"""
     req_text = f"""
 Project Overview: {requirements_summary.get('project_overview', 'N/A')}
 
 Core Features:
-{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
+{chr(10).join('- ' + str(f) for f in requirements_summary.get('core_features', []))}
 
 Technical Requirements:
 {chr(10).join(f'- {k}: {v}' for k, v in requirements_summary.get('technical_requirements', {}).items())}
 """
-    return f"{PM_DOCUMENTATION_PROMPT}\n\n{req_text}\n\nGenerate the complete project management document:"
+    
+    context_text = req_text
+    
+    # Add Level 2 outputs if available
+    if user_stories_summary:
+        context_text += f"""
 
+User Stories & Epics (Level 2: Product Output) - USE THIS TO DESIGN YOUR SYSTEM:
+{user_stories_summary[:2000]}
 
-def get_technical_prompt(requirements_summary: dict) -> str:
-    """Get full technical documentation prompt with requirements summary"""
-    req_text = f"""
+CRITICAL: Use the user stories to inform technical decisions. Design the system architecture, database, and APIs to SUPPORT these specific user stories. Consider the acceptance criteria when designing APIs and data models.
+"""
+    
+    if pm_summary:
+        context_text += f"""
+
+Project Management Plan (Level 2: Product Output) - CONSIDER FOR TECHNICAL DECISIONS:
+{pm_summary[:1500]}
+
+Consider the project timeline, resource requirements, and milestones when making 
+technical architecture decisions. Align technical approach with project constraints.
+"""
+    
+    # LEVEL 3: Must use Level 2 outputs as PRIMARY source
+    if not user_stories_summary and not pm_summary:
+        raise ValueError("Level 3 (Technical Documentation) REQUIRES at least one Level 2 output (User Stories or PM Plan). Cannot proceed without it.")
+    
+    final_prompt = f"""{TECHNICAL_DOCUMENTATION_PROMPT}
+
+=== LEVEL 3: Technical Documentation ===
+You are generating Level 3 documentation, which MUST be based on Level 2 outputs (User Stories & PM Plan).
+
+PRIMARY SOURCES - Level 2 Outputs:
+"""
+    
+    if user_stories_summary:
+        final_prompt += f"""
+User Stories & Epics (Level 2 Output):
+{user_stories_summary[:2000]}
+
+CRITICAL: Use the user stories above to design the technical system. Each user story requires:
+- Specific API endpoints to implement
+- Database tables and relationships to support the story
+- Technical architecture that enables the acceptance criteria
+"""
+    
+    if pm_summary:
+        final_prompt += f"""
+
+Project Management Plan (Level 2 Output):
+{pm_summary[:1500]}
+
+CRITICAL: Use the PM plan above to inform technical decisions:
+- Align technology choices with timeline and resource constraints
+- Design architecture that supports the project milestones
+- Consider team skills and budget from the PM plan
+"""
+    
+    final_prompt += f"""
+
+CRITICAL REMINDERS:
+- You are Level 3. Use Level 2 (User Stories & PM Plan) as your PRIMARY sources
+- DO NOT repeat requirements or Level 1/2 content - design technical solutions
+- Design SPECIFIC technical architecture to support the user stories
+- Create ACTUAL database schemas with SQL CREATE TABLE statements
+- Design CONCRETE API endpoints (list specific endpoints with paths)
+- Recommend SPECIFIC technology versions based on PM plan constraints
+- Make this document actionable for developers to implement the user stories
+
+Reference Information (for context only):
 Project Overview: {requirements_summary.get('project_overview', 'N/A')}
 
-Core Features:
-{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
-
-Technical Requirements:
-{chr(10).join(f'- {k}: {v}' for k, v in requirements_summary.get('technical_requirements', {}).items())}
-"""
-    return f"{TECHNICAL_DOCUMENTATION_PROMPT}\n\n{req_text}\n\nGenerate the complete technical specification document:"
+Generate the complete technical specification document based on Level 2 outputs:"""
+    
+    return final_prompt
 
 
 def get_api_prompt(requirements_summary: dict, technical_summary: Optional[str] = None) -> str:
-    """Get full API documentation prompt with requirements and technical summary"""
-    req_text = f"""
-Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+    """Get full API documentation prompt - Level 3 must use Technical Spec"""
+    
+    # LEVEL 3: Must use Level 3 Technical Documentation as PRIMARY source
+    if not technical_summary:
+        raise ValueError("API Documentation (Level 3) REQUIRES Technical Documentation output. Cannot proceed without it.")
+    
+    context = f"""
+=== LEVEL 3: API Documentation ===
+You are generating Level 3 API documentation, which MUST be based on Technical Documentation output.
 
-Core Features:
-{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
+PRIMARY SOURCE - Technical Documentation (Level 3):
+{technical_summary[:4000]}
 
-Technical Requirements:
-{chr(10).join(f'- {k}: {v}' for k, v in requirements_summary.get('technical_requirements', {}).items())}
+CRITICAL INSTRUCTIONS:
+1. Extract API design patterns, database schema, and system architecture from Technical Documentation above
+2. Design SPECIFIC REST API endpoints that implement the architecture described
+3. Create endpoints that work with the database schema defined in Technical Documentation
+4. Use the authentication and error handling patterns from Technical Documentation
+5. DO NOT repeat requirements or generic information - create specific API endpoint documentation
+
+Each API endpoint must:
+- Support the user stories defined in Level 2
+- Align with the database schema in Technical Documentation
+- Follow the authentication mechanisms specified in Technical Documentation
+- Implement the error handling patterns from Technical Documentation
 """
     
-    tech_text = f"\n\nTechnical Specifications:\n{technical_summary}" if technical_summary else ""
-    
-    return f"{API_DOCUMENTATION_PROMPT}\n\n{req_text}{tech_text}\n\nGenerate the complete API documentation:"
+    return f"""{API_DOCUMENTATION_PROMPT}
+
+{context}
+
+REMEMBER: You are Level 3. Use Technical Documentation as your PRIMARY source. Now generate SPECIFIC API documentation with actual endpoints:"""
 
 
 def get_developer_prompt(requirements_summary: dict, technical_summary: Optional[str] = None, api_summary: Optional[str] = None) -> str:
-    """Get full developer documentation prompt with requirements, technical, and API summary"""
-    req_text = f"""
-Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+    """Get developer documentation prompt - Must use Level 3 outputs"""
+    
+    # Must have at least Technical Documentation (Level 3)
+    if not technical_summary:
+        raise ValueError("Developer Documentation REQUIRES Technical Documentation (Level 3) output. Cannot proceed without it.")
+    
+    context = """=== Developer Documentation (Based on Level 3 Outputs) ===
+You are generating developer documentation based on Level 3 technical outputs.
 
-Core Features:
-{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
-
-Technical Requirements:
-{chr(10).join(f'- {k}: {v}' for k, v in requirements_summary.get('technical_requirements', {}).items())}
+PRIMARY SOURCES - Level 3 Outputs:
 """
     
-    tech_text = f"\n\nTechnical Specifications:\n{technical_summary}" if technical_summary else ""
-    api_text = f"\n\nAPI Documentation:\n{api_summary}" if api_summary else ""
+    context += f"""
+Technical Documentation (Level 3):
+{technical_summary[:4000]}
+
+Use the technical specifications above to provide:
+- Setup instructions based on the technology stack specified
+- Code structure matching the architecture described
+- Development workflows aligned with the technical design
+"""
     
-    return f"{DEVELOPER_DOCUMENTATION_PROMPT}\n\n{req_text}{tech_text}{api_text}\n\nGenerate the complete developer documentation:"
+    if api_summary:
+        context += f"""
+
+API Documentation (Level 3):
+{api_summary[:3000]}
+
+Use the API documentation above to provide:
+- Code examples for API integration
+- Testing procedures for API endpoints
+- SDK usage examples
+"""
+    
+    context += """
+
+CRITICAL: DO NOT repeat requirements or Level 1/2 content. Focus on HOW developers use the Level 3 specifications.
+"""
+    
+    return f"""{DEVELOPER_DOCUMENTATION_PROMPT}
+
+{context}
+
+REMEMBER: Use Level 3 outputs as PRIMARY sources. Focus on HOW to develop based on technical specs and API docs. Generate the complete developer documentation:"""
 
 
 def get_stakeholder_prompt(requirements_summary: dict, pm_summary: Optional[str] = None) -> str:
@@ -628,20 +848,34 @@ User Personas:
 
 
 def get_test_prompt(requirements_summary: dict, technical_summary: Optional[str] = None) -> str:
-    """Get full test documentation prompt with requirements and technical summary"""
-    req_text = f"""
-Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+    """Get test documentation prompt - Must use Level 3 outputs"""
+    
+    # Must have Technical Documentation (Level 3)
+    if not technical_summary:
+        raise ValueError("Test Documentation REQUIRES Technical Documentation (Level 3) output. Cannot proceed without it.")
+    
+    context = f"""
+=== Test Documentation (Based on Level 3 Outputs) ===
+You are generating test documentation based on Level 3 Technical Documentation.
 
-Core Features:
-{chr(10).join('- ' + f for f in requirements_summary.get('core_features', []))}
+PRIMARY SOURCE - Technical Documentation (Level 3):
+{technical_summary[:4000]}
 
-Technical Requirements:
-{chr(10).join(f'- {k}: {v}' for k, v in requirements_summary.get('technical_requirements', {}).items())}
+CRITICAL INSTRUCTIONS:
+Design SPECIFIC test cases based on Technical Documentation above:
+- Test cases for each API endpoint specified in Technical Documentation
+- Test cases for database operations based on the database schema in Technical Documentation
+- Test cases for system components described in Technical Documentation
+- Integration test scenarios for the architecture in Technical Documentation
+- Performance test scenarios based on Technical Documentation requirements
+- DO NOT create generic tests - base ALL tests on the specific technical design
 """
     
-    tech_text = f"\n\nTechnical Specifications:\n{technical_summary}" if technical_summary else ""
-    
-    return f"{TEST_DOCUMENTATION_PROMPT}\n\n{req_text}{tech_text}\n\nGenerate the complete test documentation:"
+    return f"""{TEST_DOCUMENTATION_PROMPT}
+
+{context}
+
+REMEMBER: Use Level 3 Technical Documentation as PRIMARY source. Generate SPECIFIC test cases with test data, expected results, and procedures based on the technical design. Generate the complete test documentation:"""
 
 
 # Claude CLI Documentation Agent Prompt
@@ -738,3 +972,485 @@ Now, consolidate all the provided documentation into a comprehensive claude.md f
 def get_claude_cli_prompt() -> str:
     """Get Claude CLI documentation prompt"""
     return CLAUDE_CLI_DOCUMENTATION_PROMPT
+
+
+# Project Charter (Business Case) Agent Prompt - Level 1: Strategic
+PROJECT_CHARTER_PROMPT = """You are a Business Analyst specializing in creating Project Charters and Business Cases.
+
+🚨 CRITICAL: Your task is to generate a PROJECT CHARTER document, NOT a requirements document.
+- DO NOT copy or repeat the requirements document content
+- Generate a Business Case with Executive Summary, ROI analysis, Stakeholder Analysis, Budget, Timeline, and Risks
+- This is a STRATEGIC business document, not a technical requirements document
+- If you see requirements content below, use it ONLY as reference to understand the project scope
+
+=== LEVEL 1: Strategic Documentation ===
+You are generating Level 1 documentation (Project Charter), which is the FOUNDATION for all subsequent levels.
+
+Based on the project requirements, generate a comprehensive Project Charter (Business Case) document in Markdown format.
+
+CRITICAL: This Level 1 document will be used by:
+- Level 2 agents (PM Documentation, User Stories) as their PRIMARY source
+- Level 3 agents (Technical, API, Database) for business context
+
+Ensure your Charter contains actionable business information that Level 2 can use to create project plans and user stories.
+
+The document must include these sections:
+1. ## Executive Summary
+   - Project overview in business terms
+   - Key business objectives
+   - Expected outcomes and benefits
+   - High-level timeline and budget
+
+2. ## Business Case
+   - Problem statement and business need
+   - Proposed solution
+   - Business value proposition
+   - Return on Investment (ROI) analysis
+   - Success metrics
+
+3. ## Project Objectives
+   - Strategic objectives
+   - Tactical objectives
+   - Success criteria
+   - Measurable outcomes
+
+4. ## Stakeholder Analysis
+   - Key stakeholders
+   - Stakeholder interests and concerns
+   - Communication requirements
+   - Decision-making authority
+
+5. ## Scope and Boundaries
+   - What is included (In-Scope)
+   - What is excluded (Out-of-Scope)
+   - Project boundaries
+   - Assumptions and constraints
+
+6. ## High-Level Timeline
+   - Major phases
+   - Key milestones
+   - Critical path items
+   - Dependencies
+
+7. ## Budget and Resources
+   - Estimated budget
+   - Resource requirements
+   - Cost breakdown
+   - Budget justification
+
+8. ## Risks and Mitigation
+   - Key business risks
+   - Technical risks
+   - Market risks
+   - Risk mitigation strategies
+
+9. ## Success Criteria
+   - Business success metrics
+   - Technical success criteria
+   - User acceptance criteria
+   - Go-live criteria
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Use tables for budget and timeline information
+- Be business-focused, not technical
+- Write for executive and stakeholder audience
+- Include specific numbers and metrics where possible
+- Professional and persuasive tone
+
+Now, analyze the following project requirements and generate the Project Charter:"""
+
+
+def get_project_charter_prompt(requirements_summary: dict) -> str:
+    """Get Project Charter prompt with requirements context"""
+    user_idea = requirements_summary.get("user_idea", "")
+    project_overview = requirements_summary.get("project_overview", "")
+    core_features = requirements_summary.get("core_features", [])
+    business_objectives = requirements_summary.get("business_objectives", [])
+    
+    context = f"""
+Project Idea: {user_idea}
+
+Project Overview: {project_overview}
+
+Core Features: {', '.join(core_features) if core_features else 'To be determined'}
+
+Business Objectives: {', '.join(business_objectives) if business_objectives else 'To be determined'}
+"""
+    
+    return PROJECT_CHARTER_PROMPT + "\n\n" + context
+
+
+# User Stories & Epics Agent Prompt - Level 2: Product
+USER_STORIES_PROMPT = """You are a Product Manager specializing in creating User Stories and Epics.
+
+🚨 CRITICAL: Your task is to generate USER STORIES with Epics, NOT a requirements document.
+- DO NOT copy or repeat the requirements document content
+- Generate SPECIFIC user stories in format: "As a [user type], I want [goal] so that [benefit]"
+- Include acceptance criteria in Given/When/Then format
+- Organize stories by Epics with story points and priorities
+- This is a PRODUCT MANAGEMENT document with actionable stories, not a requirements list
+- If you see requirements or project charter below, use them ONLY as reference to create user stories
+
+Based on the project requirements and project charter, generate a comprehensive User Stories and Epics document in Markdown format.
+
+The document must include these sections:
+1. ## Epics Overview
+   - List of major epics
+   - Epic descriptions and goals
+   - Epic priority and business value
+   - Epic dependencies
+
+2. ## User Stories by Epic
+   For each epic, include:
+   - Epic name and description
+   - Related user stories (in format: "As a [user type], I want [goal] so that [benefit]")
+   - Story acceptance criteria
+   - Story priority (Must Have, Should Have, Could Have, Won't Have - MoSCoW)
+   - Story points or effort estimate
+   - Dependencies between stories
+
+3. ## User Stories Detail
+   For each user story, provide:
+   - Story ID and title
+   - User type/persona
+   - Description (As a... I want... So that...)
+   - Acceptance Criteria (Given... When... Then...)
+   - Technical notes (if applicable)
+   - Dependencies
+   - Priority
+
+4. ## User Story Mapping
+   - User journey mapping
+   - Story flow and dependencies
+   - Critical path stories
+   - MVP scope definition
+
+5. ## Backlog Organization
+   - Sprint/iteration suggestions
+   - Story prioritization rationale
+   - Release planning suggestions
+   - MVP vs future releases
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Use tables for story lists
+- Follow standard User Story format: "As a [type], I want [action], so that [benefit]"
+- Include acceptance criteria in Given/When/Then format
+- Organize by epic and prioritize clearly
+- Include story points or effort estimates
+
+IMPORTANT OUTPUT FORMAT:
+- DO NOT wrap your response in markdown code blocks (no ```markdown)
+- DO NOT repeat the requirements document or Project Charter verbatim
+- Generate ONLY the User Stories content based on the Project Charter
+- Start directly with your document structure (e.g., "# User Stories & Epics" or "## Epics Overview")
+
+Now, analyze the following project information and generate the User Stories document:"""
+
+
+def get_user_stories_prompt(requirements_summary: dict, project_charter_summary: Optional[str] = None) -> str:
+    """Get User Stories prompt - Level 2 must use Level 1 output"""
+    # LEVEL 2: Must use Level 1 output (Project Charter) as PRIMARY source
+    if not project_charter_summary:
+        raise ValueError("Level 2 (User Stories) REQUIRES Level 1 (Project Charter) output. Cannot proceed without it.")
+    
+    context = f"""
+=== LEVEL 2: User Stories & Epics Documentation ===
+You are generating Level 2 documentation, which MUST be based on Level 1 (Project Charter) output.
+
+PRIMARY SOURCE - Level 1 Output (Project Charter):
+{project_charter_summary[:3000]}
+
+CRITICAL INSTRUCTIONS:
+1. Extract business objectives, project scope, and success criteria from the Project Charter above
+2. Create SPECIFIC user stories that support the business objectives in the Charter
+3. Prioritize stories based on the Charter's business case and ROI analysis
+4. Organize stories into epics that align with Charter milestones and phases
+5. DO NOT repeat requirements - use the Project Charter to create actionable user stories
+
+Reference Information (for context only - DO NOT repeat):
+Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+"""
+    
+    final_prompt = f"""{USER_STORIES_PROMPT}
+
+{context}
+
+CRITICAL REMINDERS:
+- You are Level 2. Use Level 1 (Project Charter) as your PRIMARY source
+- Create SPECIFIC user stories with "As a [user], I want [feature] so that [benefit]" format
+- Include detailed acceptance criteria for each story (Given/When/Then format)
+- Assign story points (1, 2, 3, 5, 8, 13) and priorities based on Charter business value
+- Organize stories into epics that align with Charter phases
+- Base ALL stories on the Project Charter business objectives
+- Each story should support the Charter's success criteria
+
+Generate the complete User Stories and Epics document based on the Project Charter:"""
+    
+    return final_prompt
+
+
+# Database Schema Agent Prompt - Level 3: Technical
+DATABASE_SCHEMA_PROMPT = """You are a Database Architect specializing in creating comprehensive database schema documentation.
+
+🚨 CRITICAL: Your task is to generate DATABASE SCHEMA documentation with SQL CREATE TABLE statements, NOT a requirements document.
+- DO NOT copy or repeat the requirements document content
+- Generate SPECIFIC database tables with columns, data types, constraints, and relationships
+- Include ACTUAL SQL CREATE TABLE statements
+- Design indexes, foreign keys, and data integrity rules
+- This is a TECHNICAL DATABASE design document, not a requirements list
+- If you see requirements or technical specs below, use them ONLY as reference to design the database schema
+
+CRITICAL: Generate SPECIFIC database schemas with actual tables, columns, data types, and relationships - not just generic database information. Design concrete database structures based on the technical specifications.
+
+Based on the project requirements and technical specifications, generate a detailed Database Schema document in Markdown format with SPECIFIC table definitions.
+
+The document must include these sections:
+1. ## Database Overview
+   - Database type and version recommendations
+   - Database architecture (single/multi-tenant, sharding, etc.)
+   - High-level data model overview
+   - Data volume and performance expectations
+
+2. ## Entity Relationship Diagram (ERD)
+   - Visual description of entity relationships (in text/ASCII art or Markdown tables)
+   - Entity names and relationships
+   - Cardinality (One-to-One, One-to-Many, Many-to-Many)
+   - Relationship descriptions
+
+3. ## Database Tables
+   For each table, provide:
+   - Table name and description
+   - All columns with:
+     - Column name
+     - Data type
+     - Constraints (Primary Key, Foreign Key, Unique, Not Null)
+     - Default values
+     - Indexes
+   - Table relationships
+   - Sample data (optional)
+
+4. ## Data Models
+   - Detailed description of each data model
+   - Business rules and constraints
+   - Data validation rules
+   - Data relationships and foreign keys
+
+5. ## Indexes and Performance
+   - Index strategy
+   - Primary indexes
+   - Secondary indexes
+   - Composite indexes
+   - Performance optimization notes
+
+6. ## Database Migrations
+   - Migration strategy
+   - Initial schema
+   - Migration scripts structure
+   - Versioning approach
+
+7. ## Data Integrity
+   - Referential integrity rules
+   - Check constraints
+   - Triggers (if applicable)
+   - Data validation rules
+
+8. ## Security and Access Control
+   - Data access patterns
+   - User roles and permissions
+   - Row-level security (if applicable)
+   - Data encryption requirements
+
+9. ## Database Scripts
+   - CREATE TABLE statements
+   - Index creation statements
+   - Foreign key constraints
+   - Sample INSERT statements (optional)
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Use code blocks for SQL statements (```sql)
+- Use tables for column definitions
+- Include ASCII art or Markdown tables for ERD
+- Be specific with data types and constraints
+- Include practical examples
+
+Now, analyze the following project requirements and technical specifications to generate the Database Schema:"""
+
+
+def get_database_schema_prompt(requirements_summary: dict, technical_summary: Optional[str] = None) -> str:
+    """Get Database Schema prompt - Level 3 must use Technical Spec"""
+    
+    # LEVEL 3: Must use Technical Documentation as PRIMARY source
+    if not technical_summary:
+        raise ValueError("Database Schema (Level 3) REQUIRES Technical Documentation output. Cannot proceed without it.")
+    
+    context = f"""
+=== LEVEL 3: Database Schema Documentation ===
+You are generating Level 3 database schema, which MUST be based on Technical Documentation output.
+
+PRIMARY SOURCE - Technical Documentation (Level 3):
+{technical_summary[:4000]}
+
+CRITICAL INSTRUCTIONS:
+1. Extract database design patterns, data models, and entity relationships from Technical Documentation above
+2. If Technical Documentation includes database design, EXPAND and DETAIL it with full SQL schemas
+3. If not detailed, design SPECIFIC database tables based on the technical architecture described
+4. Create tables that support the user stories from Level 2 and the system architecture from Technical Documentation
+5. DO NOT repeat requirements - design concrete database structures
+"""
+    
+    final_prompt = f"""{DATABASE_SCHEMA_PROMPT}
+
+{context}
+
+CRITICAL REMINDERS:
+- You are Level 3. Use Technical Documentation as your PRIMARY source
+- DO NOT repeat requirements - design SPECIFIC database schema based on Technical Documentation
+- Create ACTUAL table definitions with SQL CREATE TABLE statements
+- Include all columns with data types (VARCHAR, INT, TIMESTAMP, etc.)
+- Define PRIMARY KEYs, FOREIGN KEYs, UNIQUE constraints, NOT NULL constraints
+- Design indexes for performance based on Technical Documentation patterns
+- Create at least 5-10 core tables that support the technical architecture
+
+Reference Information (for context only):
+Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+
+Generate the complete Database Schema document based on Technical Documentation:"""
+    
+    return final_prompt
+
+
+# Setup Guide Agent Prompt - Level 3: Technical
+SETUP_GUIDE_PROMPT = """You are a Technical Writer specializing in creating comprehensive setup and installation guides for developers.
+
+🚨 CRITICAL: Your task is to generate a SETUP/INSTALLATION GUIDE with actual commands and steps, NOT a requirements document.
+- DO NOT copy or repeat the requirements document content
+- Generate SPECIFIC step-by-step installation instructions
+- Include ACTUAL commands (npm install, pip install, docker run, etc.)
+- Include configuration file examples and environment setup
+- This is a TECHNICAL SETUP GUIDE document, not a requirements list
+- If you see requirements or technical specs below, use them ONLY as reference to write setup instructions
+
+Based on the technical specifications and API documentation, generate a detailed Setup Guide (Developer Setup Guide) in Markdown format with SPECIFIC commands and configurations.
+
+The document must include these sections:
+1. ## Prerequisites
+   - Required software and versions
+   - System requirements
+   - Development tools needed
+   - Accounts and credentials needed
+
+2. ## Installation Steps
+   - Step-by-step installation instructions
+   - Package manager setup (npm, pip, etc.)
+   - Dependency installation
+   - Configuration files setup
+
+3. ## Development Environment Setup
+   - IDE/Editor recommendations
+   - IDE plugins/extensions
+   - Environment variables configuration
+   - Local configuration files
+
+4. ## Database Setup
+   - Database installation (if applicable)
+   - Database schema setup
+   - Migration scripts execution
+   - Seed data setup
+
+5. ## Running the Application
+   - How to start the development server
+   - How to run tests
+   - How to build the project
+   - Common commands
+
+6. ## Project Structure
+   - Directory structure explanation
+   - Key files and folders
+   - Configuration files location
+   - Important paths
+
+7. ## Configuration
+   - Configuration files
+   - Environment variables
+   - API keys setup
+   - External services configuration
+
+8. ## Verification
+   - How to verify installation
+   - Test the setup
+   - Common verification steps
+   - Troubleshooting verification issues
+
+9. ## Common Issues and Troubleshooting
+   - Common setup problems
+   - Solutions and workarounds
+   - Error messages and fixes
+   - Getting help
+
+10. ## Next Steps
+    - What to do after setup
+    - Development workflow introduction
+    - Links to other documentation
+    - Contributing guidelines
+
+Format requirements:
+- Use clear Markdown headings (## for main sections)
+- Use numbered lists for step-by-step instructions
+- Use code blocks for all commands (```bash, ```python, etc.)
+- Include copy-paste ready commands
+- Be specific and avoid assumptions
+- Include screenshots/descriptions where helpful
+- Test all commands before including them
+
+Now, analyze the following project requirements and technical specifications to generate the Setup Guide:"""
+
+
+def get_setup_guide_prompt(requirements_summary: dict, technical_summary: Optional[str] = None, api_summary: Optional[str] = None) -> str:
+    """Get Setup Guide prompt - Must use Level 3 outputs"""
+    
+    # Must have Technical Documentation (Level 3)
+    if not technical_summary:
+        raise ValueError("Setup Guide REQUIRES Technical Documentation (Level 3) output. Cannot proceed without it.")
+    
+    context = f"""
+=== Setup Guide (Based on Level 3 Outputs) ===
+You are generating setup instructions based on Level 3 technical outputs.
+
+PRIMARY SOURCE - Technical Documentation (Level 3):
+{technical_summary[:3000]}
+
+CRITICAL INSTRUCTIONS:
+Extract SPECIFIC setup information from Technical Documentation above:
+- Technology stack and EXACT versions (e.g., Python 3.11.5, Node.js 18.17.0, PostgreSQL 15.3)
+- Database setup procedures from technical spec
+- Configuration requirements from technical spec
+- Actual installation commands based on the specified tech stack
+"""
+    
+    if api_summary:
+        context += f"""
+
+API Documentation (Level 3):
+{api_summary[:1500]}
+
+Use API documentation to provide examples of testing API endpoints during setup verification.
+"""
+    
+    final_prompt = f"""{SETUP_GUIDE_PROMPT}
+
+{context}
+
+CRITICAL REMINDERS:
+- You are using Level 3 outputs as PRIMARY sources
+- DO NOT repeat requirements - write SPECIFIC setup instructions from Technical Documentation
+- Include actual commands (extract from tech stack in Technical Documentation)
+- Provide real configuration file examples based on Technical Documentation
+- Include step-by-step procedures with copy-paste commands
+- Base everything EXCLUSIVELY on the Level 3 technical specifications
+
+Generate the complete Setup Guide based on Technical Documentation:"""
+    
+    return final_prompt

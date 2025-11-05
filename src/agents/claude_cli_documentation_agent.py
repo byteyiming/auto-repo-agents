@@ -79,8 +79,6 @@ All Available Documentation:
 
 Generate the complete claude.md file now:"""
 
-        print(f"🤖 ClaudeCLIDocumentationAgent is generating claude.md...")
-        print(f"⏳ This may take a moment (rate limited)...")
         
         # Call LLM to generate claude.md
         claude_md_content = self._call_llm(
@@ -160,9 +158,6 @@ Generate the complete claude.md file now:"""
         # Save to file
         file_path = self.file_manager.write_file("claude.md", claude_md_content)
         
-        print(f"✅ Claude CLI documentation generated!")
-        print(f"✅ File written successfully to {file_path}")
-        print(f"📄 File saved: claude.md ({len(claude_md_content)} bytes)")
         
         # Save to context if available
         if project_id and context_manager:
@@ -175,7 +170,6 @@ Generate the complete claude.md file now:"""
                 generated_at=datetime.now()
             )
             context_manager.save_agent_output(project_id, output)
-            print(f"✅ Claude CLI documentation saved to shared context (project: {project_id})")
         
         return file_path
 

@@ -10,16 +10,27 @@ from enum import Enum
 
 class AgentType(str, Enum):
     """Types of documentation agents"""
+    # Level 1: Strategic (Entrepreneur)
     REQUIREMENTS_ANALYST = "requirements_analyst"
+    STAKEHOLDER_COMMUNICATION = "stakeholder_communication"
+    PROJECT_CHARTER = "project_charter"
+    
+    # Level 2: Product (Product Manager)
     PM_DOCUMENTATION = "pm_documentation"
+    USER_STORIES = "user_stories"
+    
+    # Level 3: Technical (Programmer)
     TECHNICAL_DOCUMENTATION = "technical_documentation"
     API_DOCUMENTATION = "api_documentation"
+    DATABASE_SCHEMA = "database_schema"
+    SETUP_GUIDE = "setup_guide"
+    
+    # Cross-Level
     DEVELOPER_DOCUMENTATION = "developer_documentation"
-    STAKEHOLDER_COMMUNICATION = "stakeholder_communication"
-    QUALITY_REVIEWER = "quality_reviewer"
-    FORMAT_CONVERTER = "format_converter"
     USER_DOCUMENTATION = "user_documentation"
     TEST_DOCUMENTATION = "test_documentation"
+    QUALITY_REVIEWER = "quality_reviewer"
+    FORMAT_CONVERTER = "format_converter"
     CLAUDE_CLI_DOCUMENTATION = "claude_cli_documentation"
 
 

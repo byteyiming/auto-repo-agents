@@ -9,6 +9,10 @@ import uuid
 
 from src.context.context_manager import ContextManager
 from src.context.shared_context import AgentType, DocumentStatus, SharedContext
+from src.utils.logger import get_logger
+from src.config.settings import get_settings, get_environment
+
+logger = get_logger(__name__)
 from src.agents.requirements_analyst import RequirementsAnalyst
 from src.agents.pm_documentation_agent import PMDocumentationAgent
 from src.agents.technical_documentation_agent import TechnicalDocumentationAgent
@@ -20,10 +24,15 @@ from src.agents.test_documentation_agent import TestDocumentationAgent
 from src.agents.quality_reviewer_agent import QualityReviewerAgent
 from src.agents.format_converter_agent import FormatConverterAgent
 from src.agents.claude_cli_documentation_agent import ClaudeCLIDocumentationAgent
+from src.agents.project_charter_agent import ProjectCharterAgent
+from src.agents.user_stories_agent import UserStoriesAgent
+from src.agents.database_schema_agent import DatabaseSchemaAgent
+from src.agents.setup_guide_agent import SetupGuideAgent
 from src.utils.file_manager import FileManager
 from src.utils.cross_referencer import CrossReferencer
 from src.utils.parallel_executor import ParallelExecutor, TaskStatus
 from src.rate_limit.queue_manager import RequestQueue
+from src.utils.document_organizer import format_documents_by_level, get_documents_summary, get_document_level, get_document_display_name
 
 
 class WorkflowCoordinator:
@@ -48,9 +57,15 @@ class WorkflowCoordinator:
             context_manager: Context manager instance
             rate_limiter: Shared rate limiter for all agents
         """
+        settings = get_settings()
         self.context_manager = context_manager or ContextManager()
-        self.rate_limiter = rate_limiter or RequestQueue(max_rate=60, period=60)
-        self.file_manager = FileManager(base_dir="docs")
+        # Use rate limit from settings
+        self.rate_limiter = rate_limiter or RequestQueue(
+            max_rate=settings.rate_limit_per_minute, 
+            period=60
+        )
+        self.file_manager = FileManager(base_dir=settings.docs_dir)
+        logger.info(f"WorkflowCoordinator initialized (environment: {settings.environment.value})")
         
         # Initialize agents (shared rate limiter)
         self.requirements_analyst = RequirementsAnalyst(rate_limiter=self.rate_limiter)
@@ -65,6 +80,18 @@ class WorkflowCoordinator:
         self.format_converter = FormatConverterAgent(rate_limiter=self.rate_limiter)
         self.claude_cli_agent = ClaudeCLIDocumentationAgent(rate_limiter=self.rate_limiter)
         self.cross_referencer = CrossReferencer()
+        
+        # Level 1: Strategic (Entrepreneur) - New agents
+        self.project_charter_agent = ProjectCharterAgent(rate_limiter=self.rate_limiter)
+        
+        # Level 2: Product (Product Manager) - New agents
+        self.user_stories_agent = UserStoriesAgent(rate_limiter=self.rate_limiter)
+        
+        # Level 3: Technical (Programmer) - New agents
+        self.database_schema_agent = DatabaseSchemaAgent(rate_limiter=self.rate_limiter)
+        self.setup_guide_agent = SetupGuideAgent(rate_limiter=self.rate_limiter)
+        
+        logger.info("WorkflowCoordinator initialized with all agents (including new Level 1-3 agents)")
     
     def _generate_technical_doc(self, req_summary, project_id):
         """Helper for parallel technical doc generation"""
@@ -109,13 +136,12 @@ class WorkflowCoordinator:
         # Generate project ID if not provided
         if not project_id:
             project_id = f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+            logger.info(f"Generated new project_id: {project_id}")
+        else:
+            logger.info(f"Using provided project_id: {project_id}")
         
-        print("=" * 60)
-        print(f"🚀 Starting Multi-Agent Documentation Generation")
-        print(f"📋 Project ID: {project_id}")
-        print(f"💡 User Idea: {user_idea}")
-        print("=" * 60)
-        print()
+        logger.info(f"Starting multi-agent documentation generation workflow (project: {project_id}, idea length: {len(user_idea)} characters)")
+        logger.info(f"🚀 Starting Multi-Agent Documentation Generation - Project ID: {project_id}, User Idea: {user_idea}")
         
         results = {
             "project_id": project_id,
@@ -126,8 +152,8 @@ class WorkflowCoordinator:
         
         try:
             # Step 1: Requirements Analyst
-            print("📝 Step 1: Generating Requirements...")
-            print("-" * 60)
+            doc_level = get_document_level("requirements")
+            logger.info(f"Step 1: Starting Requirements Analyst ({doc_level.value})")
             req_path = self.requirements_analyst.generate_and_save(
                 user_idea=user_idea,
                 output_filename="requirements.md",
@@ -136,14 +162,15 @@ class WorkflowCoordinator:
             )
             results["files"]["requirements"] = req_path
             results["status"]["requirements"] = "complete"
-            print()
+            logger.info(f"Step 1 completed: Requirements saved to {req_path}")
             
             # Step 2: Get requirements from context
-            print("📖 Step 2: Retrieving requirements for PM agent...")
-            print("-" * 60)
+            logger.info("Step 2: Retrieving requirements from context")
             context = self.context_manager.get_shared_context(project_id)
             if not context.requirements:
+                logger.error("Requirements not found in context after generation")
                 raise ValueError("Requirements not found in context")
+            logger.debug(f"Requirements retrieved from context: {len(context.requirements.core_features)} features")
             
             # Build requirements summary
             req_summary = {
@@ -152,46 +179,101 @@ class WorkflowCoordinator:
                 "core_features": context.requirements.core_features,
                 "technical_requirements": context.requirements.technical_requirements
             }
-            print("✅ Requirements retrieved from context")
-            print()
             
-            # Step 3: PM Documentation Agent
-            print("📊 Step 3: Generating Project Management Documentation...")
-            print("-" * 60)
+            # Step 3: Project Charter Agent (Level 1: Strategic)
+            doc_level = get_document_level("project_charter")
+            logger.info(f"Step 3: Starting Project Charter Agent ({doc_level.value})")
+            charter_path = self.project_charter_agent.generate_and_save(
+                requirements_summary=req_summary,
+                output_filename="project_charter.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["project_charter"] = charter_path
+            results["status"]["project_charter"] = "complete"
+            logger.info(f"Step 3 completed: Project Charter saved to {charter_path}")
+            
+            # Step 4: PM Documentation Agent (Level 2 - uses Level 1 output)
+            doc_level = get_document_level("pm_documentation")
+            logger.info(f"Step 4: Starting PM Documentation Agent ({doc_level.value})")
+            # Get Project Charter from context
+            charter_output = self.context_manager.get_agent_output(project_id, AgentType.PROJECT_CHARTER)
+            charter_summary = charter_output.content if charter_output else None
+            if charter_summary:
+                logger.debug(f"Using Project Charter ({len(charter_summary)} chars) for PM documentation")
             pm_path = self.pm_agent.generate_and_save(
                 requirements_summary=req_summary,
+                project_charter_summary=charter_summary,
                 output_filename="project_plan.md",
                 project_id=project_id,
                 context_manager=self.context_manager
             )
             results["files"]["pm_documentation"] = pm_path
             results["status"]["pm_documentation"] = "complete"
-            print()
+            logger.info(f"Step 4 completed: PM documentation saved to {pm_path}")
             
-            # Step 4: Technical Documentation Agent
-            print("🔧 Step 4: Generating Technical Documentation...")
-            print("-" * 60)
+            # Step 5: User Stories Agent (Level 2 - uses Level 1 output)
+            doc_level = get_document_level("user_stories")
+            logger.info(f"Step 5: Starting User Stories Agent ({doc_level.value})")
+            # Get Project Charter from context (reuse from Step 3)
+            charter_output = self.context_manager.get_agent_output(project_id, AgentType.PROJECT_CHARTER)
+            charter_summary = charter_output.content if charter_output else None
+            if charter_summary:
+                logger.debug(f"Using Project Charter ({len(charter_summary)} chars) for User Stories")
+            user_stories_path = self.user_stories_agent.generate_and_save(
+                requirements_summary=req_summary,
+                project_charter_summary=charter_summary,
+                output_filename="user_stories.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["user_stories"] = user_stories_path
+            results["status"]["user_stories"] = "complete"
+            logger.info(f"Step 5 completed: User Stories saved to {user_stories_path}")
+            
+            # Step 6: Technical Documentation Agent (Level 3 - uses Level 1 + Level 2 outputs)
+            doc_level = get_document_level("technical_documentation")
+            logger.info(f"Step 6: Starting Technical Documentation Agent ({doc_level.value})")
+            # Get Level 2 outputs
+            user_stories_output = self.context_manager.get_agent_output(project_id, AgentType.USER_STORIES)
+            user_stories_summary = user_stories_output.content if user_stories_output else None
+            pm_output_for_tech = self.context_manager.get_agent_output(project_id, AgentType.PM_DOCUMENTATION)
+            pm_summary_for_tech = pm_output_for_tech.content if pm_output_for_tech else None
+            if user_stories_summary:
+                logger.debug(f"Using User Stories ({len(user_stories_summary)} chars) for Technical documentation")
+            if pm_summary_for_tech:
+                logger.debug(f"Using PM Plan ({len(pm_summary_for_tech)} chars) for Technical documentation")
             technical_path = self.technical_agent.generate_and_save(
                 requirements_summary=req_summary,
+                user_stories_summary=user_stories_summary,
+                pm_summary=pm_summary_for_tech,
                 output_filename="technical_spec.md",
                 project_id=project_id,
                 context_manager=self.context_manager
             )
             results["files"]["technical_documentation"] = technical_path
             results["status"]["technical_documentation"] = "complete"
-            print()
+            logger.info(f"Step 6 completed: Technical documentation saved to {technical_path}")
             
-            # Step 5: Get technical documentation for API agent
-            print("📖 Step 5: Retrieving technical documentation for API agent...")
-            print("-" * 60)
+            # Step 7: Database Schema Agent (Level 3: Technical)
+            doc_level = get_document_level("database_schema")
+            logger.info(f"Step 7: Starting Database Schema Agent ({doc_level.value})")
             technical_output = self.context_manager.get_agent_output(project_id, AgentType.TECHNICAL_DOCUMENTATION)
             technical_summary = technical_output.content if technical_output else None
-            print("✅ Technical documentation retrieved")
-            print()
+            database_path = self.database_schema_agent.generate_and_save(
+                requirements_summary=req_summary,
+                technical_summary=technical_summary,
+                output_filename="database_schema.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["database_schema"] = database_path
+            results["status"]["database_schema"] = "complete"
+            logger.info(f"Step 7 completed: Database Schema saved to {database_path}")
             
-            # Step 6: API Documentation Agent
-            print("🔌 Step 6: Generating API Documentation...")
-            print("-" * 60)
+            # Step 8: API Documentation Agent (uses technical_summary from Step 7)
+            doc_level = get_document_level("api_documentation")
+            logger.info(f"Step 8: Starting API Documentation Agent ({doc_level.value})")
             api_path = self.api_agent.generate_and_save(
                 requirements_summary=req_summary,
                 technical_summary=technical_summary,
@@ -201,19 +283,30 @@ class WorkflowCoordinator:
             )
             results["files"]["api_documentation"] = api_path
             results["status"]["api_documentation"] = "complete"
-            print()
             
-            # Step 7: Get API documentation for developer agent
-            print("📖 Step 7: Retrieving API documentation for developer agent...")
-            print("-" * 60)
+            # Step 9: Get API documentation for setup guide and developer agents
+            logger.info("Step 9: Retrieving API documentation")
             api_output = self.context_manager.get_agent_output(project_id, AgentType.API_DOCUMENTATION)
             api_summary = api_output.content if api_output else None
-            print("✅ API documentation retrieved")
-            print()
             
-            # Step 8: Developer Documentation Agent
-            print("👨‍💻 Step 8: Generating Developer Documentation...")
-            print("-" * 60)
+            # Step 10: Setup Guide Agent (Level 3: Technical)
+            doc_level = get_document_level("setup_guide")
+            logger.info(f"Step 10: Starting Setup Guide Agent ({doc_level.value})")
+            setup_path = self.setup_guide_agent.generate_and_save(
+                requirements_summary=req_summary,
+                technical_summary=technical_summary,
+                api_summary=api_summary,
+                output_filename="setup_guide.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["setup_guide"] = setup_path
+            results["status"]["setup_guide"] = "complete"
+            logger.info(f"Step 10 completed: Setup Guide saved to {setup_path}")
+            
+            # Step 11: Developer Documentation Agent
+            doc_level = get_document_level("developer_documentation")
+            logger.info(f"Step 11: Starting Developer Documentation Agent ({doc_level.value})")
             developer_path = self.developer_agent.generate_and_save(
                 requirements_summary=req_summary,
                 technical_summary=technical_summary,
@@ -224,19 +317,15 @@ class WorkflowCoordinator:
             )
             results["files"]["developer_documentation"] = developer_path
             results["status"]["developer_documentation"] = "complete"
-            print()
             
-            # Step 9: Get PM documentation for stakeholder agent
-            print("📖 Step 9: Retrieving PM documentation for stakeholder agent...")
-            print("-" * 60)
+            # Step 12: Get PM documentation for stakeholder agent
+            logger.info("Step 12: Retrieving PM documentation for stakeholder agent")
             pm_output = self.context_manager.get_agent_output(project_id, AgentType.PM_DOCUMENTATION)
             pm_summary = pm_output.content if pm_output else None
-            print("✅ PM documentation retrieved")
-            print()
             
-            # Step 10: Stakeholder Communication Agent
-            print("👔 Step 10: Generating Stakeholder Communication Document...")
-            print("-" * 60)
+            # Step 13: Stakeholder Communication Agent
+            doc_level = get_document_level("stakeholder_communication")
+            logger.info(f"Step 13: Starting Stakeholder Communication Agent ({doc_level.value})")
             stakeholder_path = self.stakeholder_agent.generate_and_save(
                 requirements_summary=req_summary,
                 pm_summary=pm_summary,
@@ -246,12 +335,11 @@ class WorkflowCoordinator:
             )
             results["files"]["stakeholder_documentation"] = stakeholder_path
             results["status"]["stakeholder_documentation"] = "complete"
-            print()
             
             
-            # Step 12: Test Documentation Agent
-            print("🧪 Step 12: Generating Test Documentation...")
-            print("-" * 60)
+            # Step 14: Test Documentation Agent
+            doc_level = get_document_level("test_documentation")
+            logger.info(f"Step 14: Starting Test Documentation Agent ({doc_level.value})")
             test_path = self.test_agent.generate_and_save(
                 requirements_summary=req_summary,
                 technical_summary=technical_summary,
@@ -261,21 +349,35 @@ class WorkflowCoordinator:
             )
             results["files"]["test_documentation"] = test_path
             results["status"]["test_documentation"] = "complete"
-            print()
             
-            # Step 13: Collect all documentation for cross-referencing and quality review
-            print("📚 Step 13: Collecting all documentation...")
-            print("-" * 60)
+            # Step 15: User Documentation Agent (Cross-Level)
+            doc_level = get_document_level("user_documentation")
+            logger.info(f"Step 15: Starting User Documentation Agent ({doc_level.value})")
+            user_doc_path = self.user_agent.generate_and_save(
+                requirements_summary=req_summary,
+                output_filename="user_guide.md",
+                project_id=project_id,
+                context_manager=self.context_manager
+            )
+            results["files"]["user_documentation"] = user_doc_path
+            results["status"]["user_documentation"] = "complete"
+            logger.info(f"Step 15 completed: User documentation saved to {user_doc_path}")
+            
+            # Step 16: Collect all documentation for cross-referencing and quality review
             all_documentation = {}
             document_agent_types = {}
             document_file_paths = {}
             
-            # Map document types to agent types
+            # Map document types to agent types (include all new agents)
             doc_type_to_agent = {
                 "requirements": AgentType.REQUIREMENTS_ANALYST,
+                "project_charter": AgentType.PROJECT_CHARTER,
                 "pm_documentation": AgentType.PM_DOCUMENTATION,
+                "user_stories": AgentType.USER_STORIES,
                 "technical_documentation": AgentType.TECHNICAL_DOCUMENTATION,
+                "database_schema": AgentType.DATABASE_SCHEMA,
                 "api_documentation": AgentType.API_DOCUMENTATION,
+                "setup_guide": AgentType.SETUP_GUIDE,
                 "developer_documentation": AgentType.DEVELOPER_DOCUMENTATION,
                 "stakeholder_documentation": AgentType.STAKEHOLDER_COMMUNICATION,
                 "user_documentation": AgentType.USER_DOCUMENTATION,
@@ -296,37 +398,38 @@ class WorkflowCoordinator:
                             document_agent_types[doc_type] = agent_type
                             document_file_paths[agent_type] = file_path
                     except Exception as e:
-                        print(f"⚠️  Warning: Could not read {doc_type}: {e}")
+                        logger.warning(f"Could not read {doc_type}: {e}")
             
-            print(f"✅ Collected {len(all_documentation)} documents")
-            print()
+            logger.info(f"Collected {len(all_documentation)} documents for cross-referencing")
             
             # Step 13.5: Add cross-references to all documents
-            print("🔗 Step 13.5: Adding cross-references between documents...")
-            print("-" * 60)
             try:
                 referenced_docs = self.cross_referencer.create_cross_references(
                     all_documentation,
                     document_file_paths
                 )
                 
-                # Save cross-referenced documents back to files
+                # Save cross-referenced documents back to files (preserve original paths)
                 updated_count = 0
                 for agent_type, referenced_content in referenced_docs.items():
                     original_content = all_documentation.get(agent_type)
                     if referenced_content != original_content:
-                        file_path = document_file_paths[agent_type]
-                        self.file_manager.write_file(Path(file_path).name, referenced_content)
+                        original_file_path = document_file_paths[agent_type]
+                        # Write directly to original absolute path to preserve folder structure
+                        if Path(original_file_path).is_absolute():
+                            # Write directly to the absolute path
+                            Path(original_file_path).write_text(referenced_content, encoding='utf-8')
+                            logger.debug(f"Updated cross-referenced file at original path: {original_file_path}")
+                        else:
+                            # Relative path - write using file manager
+                            self.file_manager.write_file(original_file_path, referenced_content)
                         # Update all_documentation for quality review
                         all_documentation[agent_type] = referenced_content
                         updated_count += 1
                 
-                print(f"✅ Added cross-references to {updated_count} documents")
-                print()
+                logger.info(f"Added cross-references to {updated_count} documents")
                 
                 # Generate document index
-                print("📑 Generating document index...")
-                print("-" * 60)
                 try:
                     index_content = self.cross_referencer.generate_document_index(
                         all_documentation,
@@ -336,19 +439,15 @@ class WorkflowCoordinator:
                     
                     index_path = self.file_manager.write_file("index.md", index_content)
                     results["files"]["document_index"] = index_path
-                    print(f"✅ Document index created: {index_path}")
-                    print()
+                    logger.info(f"Document index created: {index_path}")
                 except Exception as e:
-                    print(f"⚠️  Warning: Could not generate index: {e}")
-                    print()
+                    logger.warning(f"Could not generate index: {e}")
                     
             except Exception as e:
-                print(f"⚠️  Warning: Cross-referencing failed: {e}")
-                print()
+                logger.warning(f"Cross-referencing failed: {e}")
             
-            # Step 14: Quality Reviewer Agent
-            print("⭐ Step 14: Running Quality Review...")
-            print("-" * 60)
+            # Step 17: Quality Reviewer Agent
+            logger.info("Running Quality Review")
             quality_review_path = self.quality_reviewer.generate_and_save(
                 all_documentation=all_documentation,
                 output_filename="quality_review.md",
@@ -357,11 +456,9 @@ class WorkflowCoordinator:
             )
             results["files"]["quality_review"] = quality_review_path
             results["status"]["quality_review"] = "complete"
-            print()
             
-            # Step 14.5: Generate Claude CLI Documentation
-            print("🤖 Step 14.5: Generating Claude CLI Documentation (claude.md)...")
-            print("-" * 60)
+            # Step 17.5: Generate Claude CLI Documentation
+            logger.info("Generating Claude CLI Documentation")
             try:
                 claude_md_path = self.claude_cli_agent.generate_and_save(
                     all_documentation=all_documentation,
@@ -370,18 +467,25 @@ class WorkflowCoordinator:
                 )
                 results["files"]["claude_cli_documentation"] = claude_md_path
                 results["status"]["claude_cli_documentation"] = "complete"
-                print()
             except Exception as e:
-                print(f"⚠️  Warning: Claude CLI documentation generation failed: {e}")
-                print()
+                logger.warning(f"Claude CLI documentation generation failed: {e}")
             
-            # Step 15: Format Conversion (convert to HTML, PDF, DOCX)
-            print("🔄 Step 15: Converting documentation to multiple formats...")
-            print("-" * 60)
+            # Step 18: Format Conversion (convert to HTML, PDF, DOCX)
+            logger.info("Converting documentation to multiple formats")
             try:
+                # Prepare documents dict with proper names for format converter
+                # Use AgentType.value as key for proper folder mapping
+                documents_for_conversion = {}
+                for agent_type, content in all_documentation.items():
+                    # Use the agent type value as the document name
+                    # Format converter will map this to the correct folder via AGENT_TYPE_TO_FOLDER
+                    documents_for_conversion[agent_type.value] = content
+                
+                logger.debug(f"Preparing to convert {len(documents_for_conversion)} documents: {list(documents_for_conversion.keys())}")
+                
                 # Convert to all supported formats
                 format_results = self.format_converter.convert_all_documents(
-                    documents={str(k.value): v for k, v in all_documentation.items()},
+                    documents=documents_for_conversion,
                     formats=["html", "pdf", "docx"],
                     project_id=project_id,
                     context_manager=self.context_manager
@@ -390,42 +494,43 @@ class WorkflowCoordinator:
                 results["status"]["format_conversions"] = "complete"
                 
                 total_conversions = sum(len(fmts) for fmts in format_results.values())
-                print(f"✅ Converted {len(format_results)} documents to {total_conversions} files (HTML, PDF, DOCX)")
+                logger.info(f"Converted {len(format_results)} documents to {total_conversions} files (HTML, PDF, DOCX)")
+                
             except Exception as e:
-                print(f"⚠️  Warning: Format conversion partially failed: {e}")
-                print("   Trying HTML-only conversion as fallback...")
+                logger.warning(f"Format conversion partially failed: {e}, trying HTML-only conversion as fallback")
                 try:
+                    # Prepare documents dict again for fallback
+                    documents_for_conversion = {agent_type.value: content for agent_type, content in all_documentation.items()}
                     format_results = self.format_converter.convert_all_documents(
-                        documents={str(k.value): v for k, v in all_documentation.items()},
+                        documents=documents_for_conversion,
                         formats=["html"],
                         project_id=project_id,
                         context_manager=self.context_manager
                     )
                     results["files"]["format_conversions"] = format_results
                     results["status"]["format_conversions"] = "partial (HTML only)"
-                    print(f"✅ Converted {len(format_results)} documents to HTML")
+                    logger.info(f"Converted {len(format_results)} documents to HTML")
                 except Exception as e2:
-                    print(f"⚠️  Format conversion failed: {e2}")
+                    logger.warning(f"Format conversion failed: {e2}")
                     results["status"]["format_conversions"] = "skipped"
-            print()
             
-            # Summary
-            print("=" * 60)
-            print("✅ Multi-Agent Workflow Complete!")
-            print("=" * 60)
-            print(f"📄 Generated Files:")
-            for doc_type, file_path in results["files"].items():
-                print(f"   - {doc_type}: {file_path}")
-            print()
-            print(f"📊 Status: {len(results['files'])} documents generated")
-            print(f"💾 Context: Saved to project {project_id}")
+            # Summary - Organized by Level
+            logger.info(f"Workflow completed successfully: {len(results['files'])} documents generated for project {project_id}")
+            
+            # Also log the organized structure
+            summary = get_documents_summary(results["files"])
+            logger.info(f"Documents organized by level: Level 1: {len(summary['level_1_strategic']['documents'])}, "
+                       f"Level 2: {len(summary['level_2_product']['documents'])}, "
+                       f"Level 3: {len(summary['level_3_technical']['documents'])}, "
+                       f"Cross-Level: {len(summary['cross_level']['documents'])}")
+            
+            # Add organized summary to results
+            results["documents_by_level"] = summary
             
             return results
             
         except Exception as e:
-            print(f"❌ Error in workflow: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Error in workflow: {str(e)}", exc_info=True)
             results["error"] = str(e)
             return results
     

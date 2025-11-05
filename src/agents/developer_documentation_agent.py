@@ -67,18 +67,13 @@ class DeveloperDocumentationAgent(BaseAgent):
         # Get prompt from centralized prompts config
         full_prompt = get_developer_prompt(requirements_summary, technical_summary, api_summary)
         
-        print(f"🤖 {self.agent_name} is generating developer documentation...")
-        print("⏳ This may take a moment (rate limited)...")
         
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             developer_doc = self._call_llm(full_prompt)
-            print("✅ Developer documentation generated!")
             return developer_doc
         except Exception as e:
-            print(f"❌ Error generating developer documentation: {e}")
             raise
     
     def generate_and_save(
@@ -111,8 +106,6 @@ class DeveloperDocumentationAgent(BaseAgent):
         try:
             file_path = self.file_manager.write_file(output_filename, developer_doc)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
             
             # Save to context if available
             if project_id and context_manager:
@@ -125,10 +118,8 @@ class DeveloperDocumentationAgent(BaseAgent):
                     generated_at=datetime.now()
                 )
                 context_manager.save_agent_output(project_id, output)
-                print(f"✅ Developer documentation saved to shared context (project: {project_id})")
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
             raise
 

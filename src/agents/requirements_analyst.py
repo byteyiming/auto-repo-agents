@@ -11,6 +11,9 @@ from src.context.context_manager import ContextManager
 from src.context.shared_context import RequirementsDocument, AgentType, DocumentStatus, AgentOutput
 from prompts.system_prompts import get_requirements_prompt
 from pathlib import Path
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class RequirementsAnalyst(BaseAgent):
@@ -63,7 +66,7 @@ class RequirementsAnalyst(BaseAgent):
         )
         
         # Initialize file manager
-        self.file_manager = file_manager or FileManager(base_dir="docs")
+        self.file_manager = file_manager or FileManager(base_dir="docs/requirements")
 
         # Initialize requirements parser
         self.parser = RequirementsParser()
@@ -85,19 +88,16 @@ class RequirementsAnalyst(BaseAgent):
         # Get prompt from centralized prompts config
         full_prompt = get_requirements_prompt(user_idea)
         
-        print(f"🤖 {self.agent_name} is analyzing: '{user_idea}'...")
-        print("⏳ This may take a moment (rate limited to stay within free tier)...")
         
         # Check rate limit stats
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             requirements_doc = self._call_llm(full_prompt)
-            print("✅ Requirements document generated!")
+            logger.info("✅ Requirements document generated!")
             return requirements_doc
         except Exception as e:
-            print(f"❌ Error generating requirements: {e}")
+            logger.error(f"Error generating requirements: {e}")
             raise
     
     def generate_and_save(
@@ -125,14 +125,16 @@ class RequirementsAnalyst(BaseAgent):
             self.context_manager = context_manager
         
         # Generate requirements
+        logger.info(f"Starting requirements generation for: {output_filename}")
         requirements_doc = self.generate(user_idea)
+        logger.debug(f"Requirements document generated (length: {len(requirements_doc)} characters)")
         
         # Save to file
         try:
             file_path = self.file_manager.write_file(output_filename, requirements_doc)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
+            logger.info(f"Requirements document saved: {file_path} (size: {file_size} bytes)")
+            logger.info("✅ File written successfully to {{file_path}}")
             
             # Save to context if available (with improved parsing)
             if self.project_id and self.context_manager:
@@ -140,20 +142,26 @@ class RequirementsAnalyst(BaseAgent):
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
+            logger.error(f"Error writing requirements file: {str(e)}", exc_info=True)
+            logger.error("❌ Error writing file: {{e}}")
             raise
     
     def _save_to_context(self, requirements_doc: str, file_path: str, user_idea: str):
         """Save requirements to shared context with intelligent parsing"""
         if not self.project_id or not self.context_manager:
+            logger.debug("Skipping context save: project_id or context_manager not available")
             return
 
         try:
+            logger.info(f"Saving requirements to context (project: {self.project_id})")
             # Create project if it doesn't exist
             self.context_manager.create_project(self.project_id, user_idea)
 
             # Parse requirements document intelligently
             req_doc = self.parser.parse_markdown(requirements_doc, user_idea)
+            logger.debug(f"Requirements parsed: {len(req_doc.core_features)} features, "
+                        f"{len(req_doc.user_personas)} personas, "
+                        f"{len(req_doc.business_objectives)} objectives")
 
             # Save parsed requirements to context
             self.context_manager.save_requirements(self.project_id, req_doc)
@@ -168,11 +176,11 @@ class RequirementsAnalyst(BaseAgent):
             )
             self.context_manager.save_agent_output(self.project_id, output)
 
-            print(f"✅ Requirements parsed and saved to shared context (project: {self.project_id})")
-            print(f"   📊 Extracted: {len(req_doc.core_features)} features, "
+            logger.info(f"Requirements saved to shared context (project: {self.project_id})")
+            logger.debug(
+                f"Extracted: {len(req_doc.core_features)} features, "
                   f"{len(req_doc.user_personas)} personas, "
-                  f"{len(req_doc.business_objectives)} objectives")
+                f"{len(req_doc.business_objectives)} objectives"
+            )
         except Exception as e:
-            print(f"⚠️  Warning: Could not save to context: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.warning(f"Could not save to context: {str(e)}", exc_info=True)

@@ -5,11 +5,116 @@ Converts documentation between different formats (Markdown, HTML, PDF, DOCX)
 from typing import Optional, List
 from datetime import datetime
 from pathlib import Path
+import os
+import sys
+import ctypes.util
+
+# Set library paths BEFORE any imports (critical for macOS)
+# macOS ignores DYLD_LIBRARY_PATH, but DYLD_FALLBACK_LIBRARY_PATH works better
+if sys.platform == 'darwin' and Path('/opt/homebrew/lib').exists():
+    homebrew_lib = '/opt/homebrew/lib'
+    current_fallback = os.environ.get('DYLD_FALLBACK_LIBRARY_PATH', '')
+    if homebrew_lib not in current_fallback:
+        os.environ['DYLD_FALLBACK_LIBRARY_PATH'] = (
+            f"{homebrew_lib}:{current_fallback}" if current_fallback 
+            else homebrew_lib
+        )
+    # Also set DYLD_LIBRARY_PATH (some tools check this first)
+    current_lib = os.environ.get('DYLD_LIBRARY_PATH', '')
+    if homebrew_lib not in current_lib:
+        os.environ['DYLD_LIBRARY_PATH'] = (
+            f"{homebrew_lib}:{current_lib}" if current_lib 
+            else homebrew_lib
+        )
+    
+    # Monkey patch ctypes.util.find_library to help WeasyPrint find libraries
+    # WeasyPrint looks for names like 'libpango-1.0-0' but files are 'libpango-1.0.0.dylib'
+    _original_find_library = ctypes.util.find_library
+    
+    def _patched_find_library(name):
+        """
+        Patched find_library that handles WeasyPrint's library naming conventions.
+        Maps names like 'libpango-1.0-0' to actual files like 'libpango-1.0.0.dylib'
+        """
+        # Mapping of WeasyPrint's expected names to actual library files
+        library_map = {
+            'libgobject-2.0-0': 'libgobject-2.0.0.dylib',
+            'libgobject-2.0': 'libgobject-2.0.dylib',
+            'libglib-2.0': 'libglib-2.0.dylib',
+            'libpango-1.0-0': 'libpango-1.0.0.dylib',
+            'libpango-1.0': 'libpango-1.0.dylib',
+            'libpangoft2-1.0': 'libpangoft2-1.0.dylib',
+            'libcairo-2': 'libcairo.2.dylib',
+            'libcairo': 'libcairo.dylib',
+            'libpixman-1': 'libpixman-1.dylib',
+        }
+        
+        # Check if we have a mapping for this library
+        mapped_name = library_map.get(name)
+        if mapped_name:
+            lib_path = Path(homebrew_lib) / mapped_name
+            if lib_path.exists():
+                return str(lib_path)
+            # Also try versioned name without .dylib extension for ctypes
+            versioned_path = Path(homebrew_lib) / mapped_name.replace('.dylib', '')
+            if versioned_path.exists():
+                return str(versioned_path)
+        
+        # For other libraries, try to find with actual filename pattern
+        # Replace '-' with '.' in version numbers if it looks like a version
+        if name.startswith('lib') and '-2.0-0' in name:
+            # Try libgobject-2.0.0 pattern
+            alt_name = name.replace('-2.0-0', '-2.0.0')
+            alt_path = Path(homebrew_lib) / f"{alt_name}.dylib"
+            if alt_path.exists():
+                return str(alt_path)
+        
+        if name.startswith('lib') and '-1.0-0' in name:
+            # Try libpango-1.0.0 pattern
+            alt_name = name.replace('-1.0-0', '-1.0.0')
+            alt_path = Path(homebrew_lib) / f"{alt_name}.dylib"
+            if alt_path.exists():
+                return str(alt_path)
+        
+        # Fall back to original find_library
+        return _original_find_library(name)
+    
+    # Apply the monkey patch
+    ctypes.util.find_library = _patched_find_library
+
 from src.agents.base_agent import BaseAgent
 from src.utils.file_manager import FileManager
 from src.context.context_manager import ContextManager
 from src.context.shared_context import AgentType, DocumentStatus, AgentOutput
 from src.rate_limit.queue_manager import RequestQueue
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+# Mapping from AgentType values to folder names in docs/
+AGENT_TYPE_TO_FOLDER = {
+    # Level 1: Strategic (Entrepreneur)
+    "requirements_analyst": "requirements",
+    "stakeholder_communication": "stakeholder",
+    "project_charter": "charter",
+    
+    # Level 2: Product (Product Manager)
+    "pm_documentation": "pm",
+    "user_stories": "user_stories",
+    
+    # Level 3: Technical (Programmer)
+    "technical_documentation": "technical",
+    "api_documentation": "api",
+    "database_schema": "database",
+    "setup_guide": "setup",
+    
+    # Cross-Level
+    "developer_documentation": "developer",
+    "user_documentation": "user",
+    "test_documentation": "test",
+    "quality_reviewer": "quality",
+}
 
 
 class FormatConverterAgent(BaseAgent):
@@ -42,8 +147,9 @@ class FormatConverterAgent(BaseAgent):
             **provider_kwargs
         )
         
-        self.file_manager = file_manager or FileManager(base_dir="docs/formats")
+        self.file_manager = file_manager or FileManager(base_dir="docs")
         self.supported_formats = ["html", "pdf", "docx"]
+        logger.info(f"FormatConverterAgent initialized with supported formats: {self.supported_formats}")
     
     def generate(self, markdown_content: str) -> str:
         """
@@ -59,20 +165,48 @@ class FormatConverterAgent(BaseAgent):
     
     def markdown_to_html(self, markdown_content: str) -> str:
         """
-        Convert Markdown to HTML
+        Convert Markdown to HTML with comprehensive formatting
         
         Args:
             markdown_content: Markdown content to convert
         
         Returns:
-            HTML content
+            HTML content with all Markdown syntax properly converted
         """
+        logger.debug(f"Converting Markdown to HTML (input length: {len(markdown_content)} characters)")
         try:
             import markdown
-            html_content = markdown.markdown(
-                markdown_content,
-                extensions=['extra', 'codehilite', 'tables']
+            import re
+            
+            # Enhanced Markdown extensions for better conversion
+            md = markdown.Markdown(
+                extensions=[
+                    'extra',           # Extra features (fenced code, tables, etc.)
+                    'codehilite',      # Syntax highlighting
+                    'tables',          # Table support
+                    'nl2br',           # Convert newlines to <br>
+                    'sane_lists',      # Better list handling
+                    'toc',             # Table of contents support
+                ]
             )
+            
+            # Convert Markdown to HTML
+            html_content = md.convert(markdown_content)
+            logger.debug(f"Markdown converted to HTML (output length: {len(html_content)} characters)")
+            
+            # Post-process to ensure all Markdown syntax is removed
+            # Fix any remaining Markdown headers (## becomes h2, etc.)
+            html_content = re.sub(r'##\s+(.+)', r'<h2>\1</h2>', html_content)
+            html_content = re.sub(r'###\s+(.+)', r'<h3>\1</h3>', html_content)
+            html_content = re.sub(r'####\s+(.+)', r'<h4>\1</h4>', html_content)
+            
+            # Fix any remaining bold syntax (**text** or __text__)
+            html_content = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', html_content)
+            html_content = re.sub(r'__([^_]+)__', r'<strong>\1</strong>', html_content)
+            
+            # Fix any remaining italic syntax (*text* or _text_)
+            html_content = re.sub(r'(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', html_content)
+            html_content = re.sub(r'(?<!_)_(?!_)([^_]+?)(?<!_)_(?!_)', r'<em>\1</em>', html_content)
             # Wrap in proper HTML structure with enhanced styling
             full_html = f"""<!DOCTYPE html>
 <html>
@@ -151,26 +285,78 @@ class FormatConverterAgent(BaseAgent):
 {html_content}
 </body>
 </html>"""
+            logger.info("Markdown to HTML conversion completed successfully")
             return full_html
         except ImportError:
             # Fallback: basic conversion without markdown library
-            print("⚠️  Warning: markdown library not installed, using basic HTML conversion")
+            logger.warning("Markdown library not installed, using basic HTML conversion")
             html_content = markdown_content.replace('\n', '<br>\n')
             return f"<html><body>{html_content}</body></html>"
+        except Exception as e:
+            logger.error(f"Error converting Markdown to HTML: {str(e)}", exc_info=True)
+            raise
     
-    def html_to_pdf(self, html_content: str, output_path: Optional[str] = None) -> str:
+    def html_to_pdf(self, html_content: str, output_path: Optional[str] = None, subdirectory: Optional[str] = None) -> str:
         """
         Convert HTML to PDF with enhanced styling
         
         Args:
             html_content: HTML content to convert
             output_path: Optional output file path
+            subdirectory: Optional subdirectory to save file in
         
         Returns:
             Path to generated PDF file
         """
+        logger.info(f"Converting HTML to PDF (subdirectory: {subdirectory}, output_path: {output_path})")
+        # Pre-load all required libraries using ctypes before importing WeasyPrint
+        # This helps WeasyPrint find the libraries on macOS with SIP
+        if sys.platform == 'darwin' and Path('/opt/homebrew/lib').exists():
+            try:
+                import ctypes
+                homebrew_lib = '/opt/homebrew/lib'
+                
+                # List of libraries WeasyPrint needs (in dependency order)
+                # Try both versioned and unversioned names
+                libs_to_load = [
+                    'libgobject-2.0.0.dylib',  # Versioned name (what WeasyPrint looks for)
+                    'libgobject-2.0.dylib',     # Unversioned name
+                    'libglib-2.0.dylib',
+                    'libcairo.2.dylib',
+                    'libpango-1.0.0.dylib',     # Versioned name
+                    'libpango-1.0.dylib',       # Unversioned name
+                    'libpangoft2-1.0.dylib',
+                ]
+                
+                # Pre-load each library in dependency order
+                for lib_name in libs_to_load:
+                    lib_path = Path(homebrew_lib) / lib_name
+                    if lib_path.exists():
+                        try:
+                            ctypes.CDLL(str(lib_path), mode=ctypes.RTLD_GLOBAL)
+                        except Exception:
+                            # Continue if one library fails - others might still work
+                            pass
+                            
+                # Also try loading from Cellar (direct path)
+                cellar_paths = [
+                    '/opt/homebrew/Cellar/glib/*/lib/libgobject-2.0.dylib',
+                    '/opt/homebrew/Cellar/cairo/*/lib/libcairo.2.dylib',
+                    '/opt/homebrew/Cellar/pango/*/lib/libpango-1.0.dylib',
+                ]
+                for pattern in cellar_paths:
+                    import glob
+                    matches = glob.glob(pattern)
+                    if matches:
+                        try:
+                            ctypes.CDLL(matches[0], mode=ctypes.RTLD_GLOBAL)
+                        except Exception:
+                            pass
+            except Exception:
+                # If pre-loading fails, continue anyway - WeasyPrint might still work
+                pass
+        
         # Suppress stderr BEFORE importing weasyprint (it prints during import)
-        import sys
         import io
         import warnings
         
@@ -188,50 +374,146 @@ class FormatConverterAgent(BaseAgent):
             if not output_path:
                 output_path = "documentation.pdf"
             
+            # If subdirectory is provided, create path with subdirectory
+            if subdirectory:
+                output_path = f"{subdirectory}/{output_path}"
+            
             # Ensure .pdf extension
             if not output_path.endswith('.pdf'):
                 output_path = str(Path(output_path).with_suffix('.pdf'))
             
-            # Enhanced CSS for PDF
+            # Enhanced CSS for PDF - Formal document styling
             pdf_css = CSS(string='''
                 @page {
                     size: A4;
-                    margin: 2cm;
+                    margin: 2.5cm 2cm;
                     @top-center {
                         content: "Documentation";
+                        font-size: 9pt;
+                        color: #666;
+                        border-bottom: 1px solid #ddd;
+                        padding-bottom: 0.5cm;
                     }
                     @bottom-center {
                         content: "Page " counter(page) " of " counter(pages);
+                        font-size: 9pt;
+                        color: #666;
+                        border-top: 1px solid #ddd;
+                        padding-top: 0.5cm;
                     }
                 }
                 body {
+                    font-family: "Times New Roman", Times, serif;
                     font-size: 11pt;
-                    line-height: 1.6;
+                    line-height: 1.8;
+                    color: #000;
+                    text-align: justify;
                 }
                 h1 {
+                    font-size: 18pt;
+                    font-weight: bold;
+                    margin-top: 2em;
+                    margin-bottom: 1em;
                     page-break-after: avoid;
-                    margin-top: 1.5em;
+                    color: #000;
+                    border-bottom: 2px solid #000;
+                    padding-bottom: 0.3em;
                 }
                 h2 {
+                    font-size: 16pt;
+                    font-weight: bold;
+                    margin-top: 1.5em;
+                    margin-bottom: 0.8em;
                     page-break-after: avoid;
+                    color: #000;
+                    border-bottom: 1px solid #666;
+                    padding-bottom: 0.2em;
+                }
+                h3 {
+                    font-size: 14pt;
+                    font-weight: bold;
                     margin-top: 1.2em;
+                    margin-bottom: 0.6em;
+                    page-break-after: avoid;
+                    color: #000;
+                }
+                h4, h5, h6 {
+                    font-size: 12pt;
+                    font-weight: bold;
+                    margin-top: 1em;
+                    margin-bottom: 0.5em;
+                    page-break-after: avoid;
+                    color: #000;
+                }
+                p {
+                    margin: 0.8em 0;
+                    text-align: justify;
+                    text-indent: 0;
+                }
+                strong {
+                    font-weight: bold;
+                }
+                em {
+                    font-style: italic;
+                }
+                ul, ol {
+                    margin: 1em 0;
+                    padding-left: 2em;
+                }
+                li {
+                    margin: 0.5em 0;
+                    text-align: justify;
                 }
                 pre {
+                    background-color: #f5f5f5;
+                    border: 1px solid #ddd;
+                    padding: 1em;
                     page-break-inside: avoid;
+                    font-family: "Courier New", monospace;
+                    font-size: 9pt;
+                    overflow-wrap: break-word;
+                }
+                code {
+                    background-color: #f5f5f5;
+                    padding: 2px 4px;
+                    font-family: "Courier New", monospace;
+                    font-size: 9pt;
                 }
                 table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 1em 0;
                     page-break-inside: avoid;
+                }
+                th, td {
+                    border: 1px solid #000;
+                    padding: 8px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f0f0f0;
+                    font-weight: bold;
+                }
+                blockquote {
+                    border-left: 3px solid #666;
+                    margin: 1em 0;
+                    padding-left: 1em;
+                    color: #444;
+                    font-style: italic;
                 }
             ''')
             
             html_obj = HTML(string=html_content)
             pdf_path = self.file_manager.base_dir / output_path
+            logger.debug(f"Writing PDF to: {pdf_path}")
             html_obj.write_pdf(pdf_path, stylesheets=[pdf_css])
             
             # Restore stderr AFTER successful conversion
             sys.stderr = stderr_backup
             
-            return str(pdf_path.absolute())
+            pdf_abs_path = str(pdf_path.absolute())
+            logger.info(f"PDF file generated successfully: {pdf_abs_path}")
+            return pdf_abs_path
             
         except (OSError, ImportError, Exception) as e:
             # Restore stderr before checking error
@@ -243,11 +525,13 @@ class FormatConverterAgent(BaseAgent):
             # If it's a library loading error (macOS), skip PDF conversion gracefully
             error_str = str(e).lower()
             if "libgobject" in error_str or "dlopen" in error_str or "cannot load library" in error_str:
+                logger.error(f"PDF conversion failed: System libraries not available. Error: {str(e)}")
                 raise ImportError(
                     "PDF conversion unavailable: System libraries not available. "
                     "PDF conversion requires additional system libraries on macOS. "
                     "HTML and DOCX formats are still available."
                 )
+            logger.error(f"Error converting HTML to PDF: {str(e)}", exc_info=True)
             raise
         except ImportError:
             try:
@@ -278,17 +562,19 @@ class FormatConverterAgent(BaseAgent):
                     "Install with: pip install weasyprint"
                 )
     
-    def markdown_to_docx(self, markdown_content: str, output_path: Optional[str] = None) -> str:
+    def markdown_to_docx(self, markdown_content: str, output_path: Optional[str] = None, subdirectory: Optional[str] = None) -> str:
         """
         Convert Markdown to DOCX
         
         Args:
             markdown_content: Markdown content to convert
             output_path: Optional output file path
+            subdirectory: Optional subdirectory to save file in
         
         Returns:
             Path to generated DOCX file
         """
+        logger.info(f"Converting Markdown to DOCX (subdirectory: {subdirectory}, output_path: {output_path})")
         try:
             from docx import Document
             from docx.shared import Inches
@@ -296,6 +582,11 @@ class FormatConverterAgent(BaseAgent):
             
             if not output_path:
                 output_path = "documentation.docx"
+            
+            # If subdirectory is provided, create path with subdirectory
+            if subdirectory:
+                output_path = f"{subdirectory}/{output_path}"
+            
             if not output_path.endswith('.docx'):
                 output_path = str(Path(output_path).with_suffix('.docx'))
             
@@ -321,20 +612,28 @@ class FormatConverterAgent(BaseAgent):
                     doc.add_paragraph()
             
             docx_path = self.file_manager.base_dir / output_path
+            logger.debug(f"Writing DOCX to: {docx_path}")
             doc.save(str(docx_path))
             
-            return str(docx_path.absolute())
-        except ImportError:
+            docx_abs_path = str(docx_path.absolute())
+            logger.info(f"DOCX file generated successfully: {docx_abs_path}")
+            return docx_abs_path
+        except ImportError as e:
+            logger.error(f"DOCX conversion failed: python-docx library not available. Error: {str(e)}")
             raise ImportError(
                 "DOCX conversion requires 'python-docx'. "
                 "Install with: pip install python-docx"
             )
+        except Exception as e:
+            logger.error(f"Error converting Markdown to DOCX: {str(e)}", exc_info=True)
+            raise
     
     def convert(
         self,
         markdown_content: str,
         output_format: str,
-        output_filename: Optional[str] = None
+        output_filename: Optional[str] = None,
+        subdirectory: Optional[str] = None
     ) -> str:
         """
         Convert Markdown content to specified format
@@ -343,11 +642,14 @@ class FormatConverterAgent(BaseAgent):
             markdown_content: Markdown content to convert
             output_format: Target format ('html', 'pdf', 'docx')
             output_filename: Optional output filename
+            subdirectory: Optional subdirectory to save file in (e.g., 'api_documentation')
         
         Returns:
             Path to converted file
         """
+        logger.info(f"Starting format conversion: {output_format} (filename: {output_filename}, subdirectory: {subdirectory})")
         if output_format.lower() not in self.supported_formats:
+            logger.error(f"Unsupported format requested: {output_format}. Supported: {self.supported_formats}")
             raise ValueError(
                 f"Unsupported format: {output_format}. "
                 f"Supported formats: {', '.join(self.supported_formats)}"
@@ -357,17 +659,26 @@ class FormatConverterAgent(BaseAgent):
             html_content = self.markdown_to_html(markdown_content)
             if not output_filename:
                 output_filename = "documentation.html"
+            # If subdirectory is provided, create path with subdirectory
+            if subdirectory:
+                output_filename = f"{subdirectory}/{output_filename}"
             file_path = self.file_manager.write_file(output_filename, html_content)
+            logger.info(f"Format conversion completed: HTML -> {file_path}")
             return file_path
         
         elif output_format.lower() == 'pdf':
             html_content = self.markdown_to_html(markdown_content)
-            return self.html_to_pdf(html_content, output_filename)
+            pdf_path = self.html_to_pdf(html_content, output_filename, subdirectory)
+            logger.info(f"Format conversion completed: PDF -> {pdf_path}")
+            return pdf_path
         
         elif output_format.lower() == 'docx':
-            return self.markdown_to_docx(markdown_content, output_filename)
+            docx_path = self.markdown_to_docx(markdown_content, output_filename, subdirectory)
+            logger.info(f"Format conversion completed: DOCX -> {docx_path}")
+            return docx_path
         
         else:
+            logger.error(f"Format conversion not implemented: {output_format}")
             raise ValueError(f"Format conversion not implemented: {output_format}")
     
     def convert_all_documents(
@@ -380,6 +691,8 @@ class FormatConverterAgent(BaseAgent):
         """
         Convert all documents to multiple formats
         
+        Each document is saved in its own subdirectory: docs/{doc_name}/
+        
         Args:
             documents: Dict mapping document names to markdown content
             formats: List of target formats (e.g., ['html', 'pdf'])
@@ -391,10 +704,37 @@ class FormatConverterAgent(BaseAgent):
         """
         results = {}
         
-        print(f"🔄 Converting {len(documents)} documents to formats: {', '.join(formats)}")
+        logger.info(f"Starting batch conversion: {len(documents)} documents to formats: {', '.join(formats)}")
+        logger.info(f"Files will be saved in docs/{{folder}}/ (matching original document folders)")
         
         for doc_name, markdown_content in documents.items():
             doc_results = {}
+            
+            # Map document name to the correct folder in docs/
+            # Use AgentType mapping if available, otherwise use document name
+            if doc_name:
+                # First try to find in mapping (for AgentType values)
+                folder_name = AGENT_TYPE_TO_FOLDER.get(doc_name.lower())
+                
+                if not folder_name:
+                    # Extract clean document name (remove file extensions, normalize)
+                    clean_name = str(Path(doc_name).stem) if '.' in str(doc_name) else str(doc_name)
+                    # Normalize to lowercase, replace spaces/underscores/hyphens
+                    clean_name = clean_name.lower().replace(' ', '_').replace('-', '_')
+                    # Try mapping again with cleaned name
+                    folder_name = AGENT_TYPE_TO_FOLDER.get(clean_name)
+                    
+                    # If still not found, use cleaned name (but try to match existing folder structure)
+                    if not folder_name:
+                        # Remove "_documentation" suffix if present to match folder names
+                        folder_name = clean_name.replace('_documentation', '')
+                        if folder_name == "requirements_analyst":
+                            folder_name = "requirements"
+                        elif folder_name == "stakeholder_communication":
+                            folder_name = "stakeholder"
+                subdirectory = folder_name
+            else:
+                subdirectory = None  # Will save to docs/ root
             
             for fmt in formats:
                 try:
@@ -408,14 +748,15 @@ class FormatConverterAgent(BaseAgent):
                     file_path = self.convert(
                         markdown_content=markdown_content,
                         output_format=fmt,
-                        output_filename=output_filename
+                        output_filename=output_filename,
+                        subdirectory=subdirectory
                     )
                     
                     doc_results[fmt] = file_path
-                    print(f"  ✅ Converted {doc_name} to {fmt}")
+                    logger.info(f"Successfully converted {doc_name} to {fmt} → {subdirectory}/{output_filename}")
                     
                 except Exception as e:
-                    print(f"  ❌ Error converting {doc_name} to {fmt}: {e}")
+                    logger.error(f"Error converting {doc_name} to {fmt}: {str(e)}", exc_info=True)
                     doc_results[fmt] = None
             
             results[doc_name] = doc_results
@@ -431,7 +772,8 @@ class FormatConverterAgent(BaseAgent):
                 generated_at=datetime.now()
             )
             context_manager.save_agent_output(project_id, output)
-            print(f"✅ Format conversions saved to shared context (project: {project_id})")
+            logger.info(f"Format conversions saved to shared context (project: {project_id})")
         
+        logger.info(f"Batch conversion completed: {len(results)} documents processed")
         return results
 

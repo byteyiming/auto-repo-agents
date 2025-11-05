@@ -60,18 +60,13 @@ class APIDocumentationAgent(BaseAgent):
         # Get prompt from centralized prompts config
         full_prompt = get_api_prompt(requirements_summary, technical_summary)
         
-        print(f"🤖 {self.agent_name} is generating API documentation...")
-        print("⏳ This may take a moment (rate limited)...")
         
         stats = self.get_stats()
-        print(f"📊 Rate limit status: {stats['requests_in_window']}/{stats['max_rate']} requests in window")
         
         try:
             api_doc = self._call_llm(full_prompt)
-            print("✅ API documentation generated!")
             return api_doc
         except Exception as e:
-            print(f"❌ Error generating API documentation: {e}")
             raise
     
     def generate_and_save(
@@ -102,8 +97,6 @@ class APIDocumentationAgent(BaseAgent):
         try:
             file_path = self.file_manager.write_file(output_filename, api_doc)
             file_size = self.file_manager.get_file_size(output_filename)
-            print(f"✅ File written successfully to {file_path}")
-            print(f"📄 File saved: {output_filename} ({file_size} bytes)")
             
             # Save to context if available
             if project_id and context_manager:
@@ -116,10 +109,8 @@ class APIDocumentationAgent(BaseAgent):
                     generated_at=datetime.now()
                 )
                 context_manager.save_agent_output(project_id, output)
-                print(f"✅ API documentation saved to shared context (project: {project_id})")
             
             return file_path
         except Exception as e:
-            print(f"❌ Error writing file: {e}")
             raise
 

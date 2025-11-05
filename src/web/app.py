@@ -15,6 +15,7 @@ from datetime import datetime
 
 from src.coordination.coordinator import WorkflowCoordinator
 from src.context.context_manager import ContextManager
+from src.utils.document_organizer import get_documents_summary
 
 
 # Global coordinator and context manager
@@ -30,12 +31,10 @@ async def lifespan(app: FastAPI):
     global coordinator, context_manager
     context_manager = ContextManager()
     coordinator = WorkflowCoordinator(context_manager=context_manager)
-    print("✅ Application startup: Coordinator initialized")
     
     yield
     
     # Shutdown (cleanup if needed)
-    print("✅ Application shutdown: Cleanup complete")
 
 
 app = FastAPI(title="DOCU-GEN API", version="1.0.0", lifespan=lifespan)
@@ -197,17 +196,52 @@ async def root():
                 color: #667eea;
                 margin-bottom: 20px;
             }
-            .results-list {
-                list-style: none;
-            }
-            .results-list li {
-                padding: 15px;
-                margin-bottom: 10px;
+            .level-section {
+                margin-bottom: 30px;
+                padding: 20px;
                 background: #f8f9fa;
                 border-radius: 10px;
+                border-left: 4px solid #667eea;
+            }
+            .level-section.level-1 {
+                border-left-color: #f44336;
+                background: #ffebee;
+            }
+            .level-section.level-2 {
+                border-left-color: #2196f3;
+                background: #e3f2fd;
+            }
+            .level-section.level-3 {
+                border-left-color: #4caf50;
+                background: #e8f5e9;
+            }
+            .level-section.cross-level {
+                border-left-color: #ff9800;
+                background: #fff3e0;
+            }
+            .level-title {
+                font-size: 1.2em;
+                font-weight: 600;
+                margin-bottom: 15px;
+                color: #333;
+            }
+            .results-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+            .results-list li {
+                padding: 12px 15px;
+                margin-bottom: 8px;
+                background: white;
+                border-radius: 8px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .results-list li:hover {
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             }
             .download-btn {
                 background: #4caf50;
@@ -243,8 +277,8 @@ async def root():
             </div>
             
             <div id="results" class="results">
-                <h2>Generated Documents</h2>
-                <ul id="resultsList" class="results-list"></ul>
+                <h2>Generated Documents (Organized by Level)</h2>
+                <div id="resultsContainer"></div>
             </div>
         </div>
         
@@ -254,7 +288,7 @@ async def root():
             const progressDiv = document.getElementById('progress');
             const progressBar = document.getElementById('progressBar');
             const resultsDiv = document.getElementById('results');
-            const resultsList = document.getElementById('resultsList');
+            const resultsContainer = document.getElementById('resultsContainer');
             const generateBtn = document.getElementById('generateBtn');
             let projectId = null;
             let pollInterval = null;
@@ -305,7 +339,7 @@ async def root():
                     const data = await response.json();
                     
                     const completed = data.completed_agents.length;
-                    const total = 10; // Total number of agents
+                    const total = 15; // Total number of agents/documents
                     const progressPercent = Math.round((completed / total) * 100);
                     
                     progressBar.style.width = progressPercent + '%';
@@ -337,29 +371,78 @@ async def root():
                     const response = await fetch(`/api/results/${projectId}`);
                     const data = await response.json();
                     
-                    resultsList.innerHTML = '';
+                    resultsContainer.innerHTML = '';
                     
-                    const docTypes = {
-                        'requirements': 'Requirements Document',
-                        'pm_documentation': 'Project Management Plan',
-                        'technical_documentation': 'Technical Specification',
-                        'api_documentation': 'API Documentation',
-                        'developer_documentation': 'Developer Guide',
-                        'stakeholder_documentation': 'Stakeholder Summary',
-                        'user_documentation': 'User Guide',
-                        'test_documentation': 'Test Plan'
+                    // Use organized structure if available, otherwise fall back to files
+                    let documentsByLevel = data.documents_by_level;
+                    
+                    if (!documentsByLevel && data.files) {
+                        // Fallback: organize on client side
+                        documentsByLevel = {
+                            level_1_strategic: { level_name: 'Level 1: Strategic (Entrepreneur)', documents: [] },
+                            level_2_product: { level_name: 'Level 2: Product (Product Manager)', documents: [] },
+                            level_3_technical: { level_name: 'Level 3: Technical (Programmer)', documents: [] },
+                            cross_level: { level_name: 'Cross-Level (Everyone)', documents: [] }
+                        };
+                        
+                        // Simple client-side organization
+                        const levelMapping = {
+                            'requirements': 'level_1_strategic',
+                            'project_charter': 'level_1_strategic',
+                            'stakeholder_documentation': 'level_1_strategic',
+                            'pm_documentation': 'level_2_product',
+                            'user_stories': 'level_2_product',
+                            'technical_documentation': 'level_3_technical',
+                            'api_documentation': 'level_3_technical',
+                            'database_schema': 'level_3_technical',
+                            'setup_guide': 'level_3_technical'
                     };
                     
                     for (const [docType, filePath] of Object.entries(data.files)) {
-                        if (filePath && docType in docTypes) {
-                            const li = document.createElement('li');
-                            li.innerHTML = `
-                                <span>${docTypes[docType]}</span>
-                                <a href="/api/download/${projectId}/${docType}" class="download-btn">Download</a>
-                            `;
-                            resultsList.appendChild(li);
+                            const level = levelMapping[docType] || 'cross_level';
+                            documentsByLevel[level].documents.push({
+                                type: docType,
+                                display_name: docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                                file_path: filePath
+                            });
                         }
                     }
+                    
+                    // Render by level
+                    const levels = [
+                        { key: 'level_1_strategic', emoji: '🎯', class: 'level-1' },
+                        { key: 'level_2_product', emoji: '📊', class: 'level-2' },
+                        { key: 'level_3_technical', emoji: '💻', class: 'level-3' },
+                        { key: 'cross_level', emoji: '🌐', class: 'cross-level' }
+                    ];
+                    
+                    levels.forEach(level => {
+                        const levelData = documentsByLevel[level.key];
+                        if (levelData && levelData.documents && levelData.documents.length > 0) {
+                            const section = document.createElement('div');
+                            section.className = `level-section ${level.class}`;
+                            
+                            const title = document.createElement('div');
+                            title.className = 'level-title';
+                            title.textContent = `${level.emoji} ${levelData.level_name}`;
+                            section.appendChild(title);
+                            
+                            const list = document.createElement('ul');
+                            list.className = 'results-list';
+                            
+                            levelData.documents.forEach(doc => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                    <span>${doc.display_name}</span>
+                                    <a href="/api/download/${projectId}/${doc.type}" class="download-btn">Download</a>
+                            `;
+                                list.appendChild(li);
+                            });
+                            
+                            section.appendChild(list);
+                            resultsContainer.appendChild(section);
+                        }
+                    });
                     
                     resultsDiv.classList.add('active');
                 } catch (error) {
@@ -446,7 +529,7 @@ async def get_status(project_id: str):
 
 @app.get("/api/results/{project_id}")
 async def get_results(project_id: str):
-    """Get generation results"""
+    """Get generation results with documents organized by level"""
     if project_id not in project_status:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -454,7 +537,13 @@ async def get_results(project_id: str):
     if status["status"] != "complete":
         raise HTTPException(status_code=400, detail="Generation not complete")
     
-    return status.get("results", {})
+    results = status.get("results", {})
+    
+    # Ensure documents_by_level is included
+    if "documents_by_level" not in results and "files" in results:
+        results["documents_by_level"] = get_documents_summary(results["files"])
+    
+    return results
 
 
 @app.get("/api/download/{project_id}/{doc_type}")
