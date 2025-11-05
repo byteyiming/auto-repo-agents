@@ -1150,12 +1150,10 @@ Now, analyze the following project information and generate the User Stories doc
 
 
 def get_user_stories_prompt(requirements_summary: dict, project_charter_summary: Optional[str] = None) -> str:
-    """Get User Stories prompt - Level 2 must use Level 1 output"""
-    # LEVEL 2: Must use Level 1 output (Project Charter) as PRIMARY source
-    if not project_charter_summary:
-        raise ValueError("Level 2 (User Stories) REQUIRES Level 1 (Project Charter) output. Cannot proceed without it.")
-    
-    context = f"""
+    """Get User Stories prompt - Level 2 can use Level 1 output if available"""
+    if project_charter_summary:
+        # Team mode: Use Project Charter as primary source
+        context = f"""
 === LEVEL 2: User Stories & Epics Documentation ===
 You are generating Level 2 documentation, which MUST be based on Level 1 (Project Charter) output.
 
@@ -1167,12 +1165,40 @@ CRITICAL INSTRUCTIONS:
 2. Create SPECIFIC user stories that support the business objectives in the Charter
 3. Prioritize stories based on the Charter's business case and ROI analysis
 4. Organize stories into epics that align with Charter milestones and phases
-5. DO NOT repeat requirements - use the Project Charter to create actionable user stories
-
-Reference Information (for context only - DO NOT repeat):
-Project Overview: {requirements_summary.get('project_overview', 'N/A')}
 """
+    else:
+        # Individual mode: Work with requirements only
+        context = f"""
+=== LEVEL 2: User Stories & Epics Documentation ===
+You are generating Level 2 documentation based on requirements. (Project Charter not available - individual profile mode)
+
+CRITICAL INSTRUCTIONS:
+1. Extract user needs and core features from the requirements below
+2. Create SPECIFIC user stories that implement the core features
+3. Prioritize stories based on feature importance and dependencies
+4. Organize stories into logical epics that group related functionality
+5. DO NOT repeat requirements - create actionable user stories from the features
+
+Reference Information:
+Project Overview: {requirements_summary.get('project_overview', 'N/A')}
+Core Features: {', '.join(requirements_summary.get('core_features', [])) if requirements_summary.get('core_features') else 'N/A'}
+"""
+        final_prompt = f"""{USER_STORIES_PROMPT}
+
+{context}
+
+CRITICAL REMINDERS:
+- You are Level 2. Generate user stories based on the requirements and core features
+- Create SPECIFIC user stories with "As a [user], I want [feature] so that [benefit]" format
+- Include detailed acceptance criteria for each story (Given/When/Then format)
+- Assign story points (1, 2, 3, 5, 8, 13) and priorities based on feature importance
+- Organize stories into logical epics that group related functionality
+- Base ALL stories on the core features and user needs from requirements
+
+Generate the complete User Stories and Epics document based on the requirements:"""
+        return final_prompt
     
+    # Team mode: Use Project Charter
     final_prompt = f"""{USER_STORIES_PROMPT}
 
 {context}
