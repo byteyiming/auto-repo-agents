@@ -9,6 +9,7 @@ from src.utils.file_manager import FileManager
 from src.context.context_manager import ContextManager
 from src.context.shared_context import AgentType, DocumentStatus, AgentOutput
 from src.quality.quality_checker import QualityChecker
+from src.quality.document_type_quality_checker import DocumentTypeQualityChecker
 from src.rate_limit.queue_manager import RequestQueue
 from prompts.system_prompts import get_quality_reviewer_prompt
 
@@ -48,6 +49,8 @@ class QualityReviewerAgent(BaseAgent):
         
         self.file_manager = file_manager or FileManager(base_dir="docs/quality")
         self.quality_checker = quality_checker or QualityChecker()
+        # Use document-type-aware quality checker for better accuracy
+        self.document_type_checker = DocumentTypeQualityChecker()
     
     def generate(self, all_documentation: Dict[str, str]) -> str:
         """
@@ -59,15 +62,30 @@ class QualityReviewerAgent(BaseAgent):
         Returns:
             Generated quality review report (Markdown)
         """
-        # First run automated quality checks
+        # First run automated quality checks using document-type-aware checker
         automated_scores = {}
         for doc_name, doc_content in all_documentation.items():
             try:
-                quality_result = self.quality_checker.check_quality(doc_content)
+                # Use document-type-aware checker for better accuracy
+                quality_result = self.document_type_checker.check_multiple_documents(
+                    {doc_name: doc_content}
+                ).get(doc_name, {})
+                
+                # Fallback to base checker if document-type checker fails
+                if not quality_result or quality_result.get("error"):
+                    quality_result = self.quality_checker.check_quality(doc_content)
+                
                 automated_scores[doc_name] = quality_result
             except Exception as e:
                 # Skip quality check for this document if it fails
-                pass
+                automated_scores[doc_name] = {
+                    "overall_score": 0,
+                    "passed": False,
+                    "error": str(e),
+                    "word_count": {"word_count": 0},
+                    "sections": {"completeness_score": 0, "found_count": 0, "required_count": 0},
+                    "readability": {"readability_score": 0, "level": "unknown"}
+                }
         
         # Get prompt from centralized prompts config
         full_prompt = get_quality_reviewer_prompt(all_documentation)
@@ -78,10 +96,18 @@ class QualityReviewerAgent(BaseAgent):
             for doc_name, score_data in automated_scores.items():
                 scores_summary += f"\n### {doc_name}\n"
                 scores_summary += f"- Overall Score: {score_data.get('overall_score', 0):.1f}/100\n"
-                scores_summary += f"- Word Count: {score_data.get('breakdown', {}).get('word_count', {}).get('word_count', 0)}\n"
-                scores_summary += f"- Section Completeness: {score_data.get('breakdown', {}).get('sections', {}).get('completeness_score', 0):.1f}%\n"
+                # Fix: Access word_count directly from the result structure
+                word_count_data = score_data.get('word_count', {})
+                sections_data = score_data.get('sections', {})
+                readability_data = score_data.get('readability', {})
+                
+                scores_summary += f"- Word Count: {word_count_data.get('word_count', 0)} (min: {word_count_data.get('min_threshold', 100)}, passed: {word_count_data.get('passed', False)})\n"
+                scores_summary += f"- Section Completeness: {sections_data.get('completeness_score', 0):.1f}% ({sections_data.get('found_count', 0)}/{sections_data.get('required_count', 0)} sections found, passed: {sections_data.get('passed', False)})\n"
+                scores_summary += f"- Readability Score: {readability_data.get('readability_score', 0):.1f} ({readability_data.get('level', 'unknown')}, passed: {readability_data.get('passed', False)})\n"
+                if sections_data.get('missing_sections'):
+                    scores_summary += f"- Missing Sections: {', '.join([s.replace('^#+\\\\s+', '').replace('\\\\s+', ' ') for s in sections_data.get('missing_sections', [])[:3]])}\n"
             
-            full_prompt += scores_summary + "\n\nConsider these automated scores in your review."
+            full_prompt += scores_summary + "\n\nConsider these automated scores in your review. Focus on improving documents with low scores."
         
         
         stats = self.get_stats()
