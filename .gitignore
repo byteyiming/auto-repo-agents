@@ -1,6 +1,10 @@
 # Environment variables
 .env
 .env.local
+.env.production
+.env.test
+# Keep .env.example as a template
+!.env.example
 
 # Python
 __pycache__/
@@ -26,13 +30,7 @@ build/
 *.sublime-workspace
 
 # Generated documentation (keep structure, ignore generated content)
-docs/pm/*.md
-docs/technical/*.md
-docs/api/*.md
-docs/developer/*.md
-docs/stakeholder/*.md
-!docs/README.md
-!docs/**/README.md
+docs
 
 # Database files
 *.db
