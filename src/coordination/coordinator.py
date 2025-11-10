@@ -755,23 +755,31 @@ Improvement Suggestions:
                 AgentType.USER_STORIES: stories_content,
             }
             
-            # Create executor
-            executor = ParallelExecutor(max_workers=8)
+            # Create async executor for Phase 2
+            # Use AsyncParallelExecutor for true async parallel execution
+            executor = AsyncParallelExecutor(max_workers=8)
             
-            # Create task execution functions for each Phase 2 task
-            # These functions will extract dependencies from context when executed
-            def create_task_executor(task: Phase2Task):
-                """Create a task executor function that extracts dependencies from context"""
-                def execute_task():
+            # Create async task execution coroutines for each Phase 2 task
+            # These coroutines will extract dependencies from context when executed
+            def create_async_task_coro(task: Phase2Task):
+                """Create an async task coroutine that extracts dependencies and executes agent"""
+                async def execute_async_task():
                     # Extract dependency content from context (for Phase 2 dependencies)
                     # Phase 1 dependencies are already available in phase1_deps_content
                     deps_content = phase1_deps_content.copy()
                     
                     # Get Phase 2 dependencies from context (these are completed in Phase 2)
+                    # Note: We run sync context_manager calls in executor to avoid blocking
+                    loop = asyncio.get_event_loop()
                     for dep_type in task.dependencies:
                         if dep_type not in deps_content:
-                            # This is a Phase 2 dependency, fetch from context
-                            dep_output = self.context_manager.get_agent_output(project_id, dep_type)
+                            # This is a Phase 2 dependency, fetch from context (async-safe)
+                            # Capture dep_type in closure to avoid lambda issues
+                            dep_type_capture = dep_type
+                            dep_output = await loop.run_in_executor(
+                                None,
+                                lambda dt=dep_type_capture: self.context_manager.get_agent_output(project_id, dt)
+                            )
                             if dep_output:
                                 deps_content[dep_type] = dep_output.content
                             else:
@@ -779,7 +787,7 @@ Improvement Suggestions:
                                 logger.warning(f"  ⚠️  Dependency {dep_type.value} not found in context for {task.task_id}")
                                 deps_content[dep_type] = None
                     
-                    # Build kwargs for agent.generate_and_save
+                    # Build kwargs for agent.generate_and_save (sync function, but fast)
                     kwargs = build_kwargs_for_task(
                         task=task,
                         coordinator=self,
@@ -796,27 +804,93 @@ Improvement Suggestions:
                     if not agent:
                         raise ValueError(f"Agent not found for {task.agent_type.value}")
                     
-                    # Execute agent
-                    return agent.generate_and_save(**kwargs)
+                    # Execute agent.generate_and_save in executor (it's sync, but we run it async)
+                    # This allows true async parallel execution of multiple agents
+                    # Capture kwargs in closure
+                    result = await loop.run_in_executor(
+                        None,
+                        lambda kw=kwargs: agent.generate_and_save(**kw)
+                    )
+                    return result
                 
-                return execute_task
+                return execute_async_task
             
-            # Add all tasks to executor
+            # Add all tasks to async executor
             for task in phase2_tasks:
-                task_executor = create_task_executor(task)
+                # Create the async coroutine for this task
+                task_coro = create_async_task_coro(task)()
                 dep_task_ids = dependency_map.get(task.task_id, [])
                 
                 executor.add_task(
                     task_id=task.task_id,
-                    func=task_executor,
-                    args=(),
+                    coro=task_coro,
                     dependencies=dep_task_ids
                 )
-                logger.debug(f"  📝 Added task: {task.task_id} (depends on: {dep_task_ids})")
+                logger.debug(f"  📝 Added async task: {task.task_id} (depends on: {dep_task_ids})")
             
-            # Execute parallel tasks
-            logger.info(f"🚀 Executing {len(executor.tasks)} parallel tasks with DAG dependencies...")
-            parallel_results = executor.execute()
+            # Execute parallel tasks asynchronously
+            # Note: Since generate_all_docs is sync, we need to run the async executor
+            # We use asyncio.run() which creates a new event loop and runs until complete
+            logger.info(f"🚀 Executing {len(executor.tasks)} parallel async tasks with DAG dependencies...")
+            try:
+                # Check if we're in an async context
+                try:
+                    loop = asyncio.get_running_loop()
+                    # We're in an async context, but generate_all_docs is sync
+                    # This shouldn't happen, but if it does, we'll use a thread
+                    logger.warning("  ⚠️  generate_all_docs is sync but called from async context, using thread pool")
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor_pool:
+                        future = executor_pool.submit(asyncio.run, executor.execute())
+                        parallel_results = future.result()
+                except RuntimeError:
+                    # No event loop is running, we can use asyncio.run()
+                    parallel_results = asyncio.run(executor.execute())
+            except Exception as e:
+                logger.error(f"  ❌ Error executing async tasks: {e}", exc_info=True)
+                # Fallback to sync execution if async fails
+                logger.warning("  ⚠️  Falling back to sync ParallelExecutor")
+                from src.utils.parallel_executor import ParallelExecutor as SyncParallelExecutor
+                sync_executor = SyncParallelExecutor(max_workers=8)
+                
+                # Re-add tasks to sync executor
+                def create_sync_task_executor(task: Phase2Task):
+                    def execute_task():
+                        deps_content = phase1_deps_content.copy()
+                        for dep_type in task.dependencies:
+                            if dep_type not in deps_content:
+                                dep_output = self.context_manager.get_agent_output(project_id, dep_type)
+                                if dep_output:
+                                    deps_content[dep_type] = dep_output.content
+                                else:
+                                    logger.warning(f"  ⚠️  Dependency {dep_type.value} not found in context for {task.task_id}")
+                                    deps_content[dep_type] = None
+                        kwargs = build_kwargs_for_task(
+                            task=task,
+                            coordinator=self,
+                            req_summary=req_summary,
+                            technical_summary=technical_summary,
+                            charter_content=charter_content,
+                            project_id=project_id,
+                            context_manager=self.context_manager,
+                            deps_content=deps_content
+                        )
+                        agent = get_agent_for_task(self, task.agent_type)
+                        if not agent:
+                            raise ValueError(f"Agent not found for {task.agent_type.value}")
+                        return agent.generate_and_save(**kwargs)
+                    return execute_task
+                
+                for task in phase2_tasks:
+                    task_executor = create_sync_task_executor(task)
+                    dep_task_ids = dependency_map.get(task.task_id, [])
+                    sync_executor.add_task(
+                        task_id=task.task_id,
+                        func=task_executor,
+                        args=(),
+                        dependencies=dep_task_ids
+                    )
+                parallel_results = sync_executor.execute()
             
             # Map AgentType to document type name for results
             # This mapping ensures consistency with the original implementation
