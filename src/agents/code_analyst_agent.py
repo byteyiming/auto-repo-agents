@@ -261,7 +261,7 @@ Start with the documentation content:"""
         doc_content = self.generate_code_documentation(code_analysis, existing_docs)
         
         # Save to file
-        file_path = self.file_manager.write_file(output_filename, doc_content, project_id=project_id)
+        file_path = self.file_manager.write_file(output_filename, doc_content)
         logger.info(f"Code-based documentation saved to: {file_path}")
         
         # Save to context

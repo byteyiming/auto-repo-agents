@@ -99,7 +99,7 @@ class BusinessModelAgent(BaseAgent):
         business_doc = self.generate(requirements_summary, project_charter_summary)
         
         # Save to file
-        file_path = self.file_manager.write_file(output_filename, business_doc, project_id=project_id)
+        file_path = self.file_manager.write_file(output_filename, business_doc)
         logger.info(f"Business model saved to: {file_path}")
         
         # Save to context if available

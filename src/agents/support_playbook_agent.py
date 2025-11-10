@@ -99,7 +99,7 @@ class SupportPlaybookAgent(BaseAgent):
         support_doc = self.generate(requirements_summary, user_documentation_summary)
         
         # Save to file
-        file_path = self.file_manager.write_file(output_filename, support_doc, project_id=project_id)
+        file_path = self.file_manager.write_file(output_filename, support_doc)
         logger.info(f"Support playbook saved to: {file_path}")
         
         # Save to context if available

@@ -175,7 +175,7 @@ Start directly with the improved document content (no preamble):"""
         improved_doc = self.improve_document(original_document, document_type, quality_feedback)
         
         # Save to file (overwrite original)
-        file_path = self.file_manager.write_file(output_filename, improved_doc, project_id=project_id)
+        file_path = self.file_manager.write_file(output_filename, improved_doc)
         logger.info(f"Improved {document_type} saved to: {file_path}")
         
         # Save to context if available

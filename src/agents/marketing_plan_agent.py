@@ -112,7 +112,7 @@ class MarketingPlanAgent(BaseAgent):
         )
         
         # Save to file
-        file_path = self.file_manager.write_file(output_filename, marketing_doc, project_id=project_id)
+        file_path = self.file_manager.write_file(output_filename, marketing_doc)
         logger.info(f"Marketing plan saved to: {file_path}")
         
         # Save to context if available
