@@ -10,7 +10,7 @@ import os
 import re
 
 from src.context.context_manager import ContextManager
-from src.context.shared_context import AgentType, DocumentStatus, SharedContext
+from src.context.shared_context import AgentType, DocumentStatus, SharedContext, AgentOutput
 from src.utils.logger import get_logger
 from src.config.settings import get_settings, get_environment
 
