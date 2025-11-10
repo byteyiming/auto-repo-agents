@@ -35,6 +35,7 @@ from src.agents.business_model_agent import BusinessModelAgent
 from src.agents.support_playbook_agent import SupportPlaybookAgent
 from src.agents.legal_compliance_agent import LegalComplianceAgent
 from src.agents.document_improver_agent import DocumentImproverAgent
+from src.agents.code_analyst_agent import CodeAnalystAgent
 from src.utils.file_manager import FileManager
 from src.utils.cross_referencer import CrossReferencer
 from src.utils.parallel_executor import ParallelExecutor, TaskStatus
@@ -215,6 +216,13 @@ class WorkflowCoordinator:
         self.document_improver = DocumentImproverAgent(
             rate_limiter=self.rate_limiter,
             provider_name=get_agent_provider("document_improver")
+        )
+        
+        # Code Analyst Agent (for code-first workflow)
+        self.code_analyst = CodeAnalystAgent(
+            rate_limiter=self.rate_limiter,
+            provider_name=get_agent_provider("code_analyst"),
+            file_manager=self.file_manager
         )
         
         # Log provider configuration
@@ -399,17 +407,28 @@ Improvement Suggestions:
             context_manager=self.context_manager
         )
     
-    def generate_all_docs(self, user_idea: str, project_id: Optional[str] = None, profile: str = "team") -> Dict:
+    def generate_all_docs(
+        self,
+        user_idea: str,
+        project_id: Optional[str] = None,
+        profile: str = "team",
+        codebase_path: Optional[str] = None
+    ) -> Dict:
         """
         Generate all documentation types from a user idea using HYBRID workflow:
         - Phase 1: Foundational documents with Quality Gate (iterative improvement)
         - Phase 2: Secondary documents in parallel (fast execution)
         - Phase 3: Final packaging (cross-ref, review, convert)
+        - Phase 4: Code analysis and documentation update (optional, if codebase_path provided)
         
         Args:
             user_idea: User's project idea
             project_id: Optional project ID (generates one if not provided)
             profile: "team" or "individual" - determines which docs to generate
+            codebase_path: Optional path to codebase directory. If provided, Phase 4 will:
+                         - Analyze the codebase
+                         - Update API and Developer documentation to match actual code
+                         - Ensure documentation accuracy
         
         Returns:
             Dict with generated file paths and status
@@ -792,6 +811,140 @@ Improvement Suggestions:
             logger.info("=" * 80)
             logger.info("✅ PHASE 3 COMPLETE: Final packaging and conversion completed")
             logger.info("=" * 80)
+            
+            # --- PHASE 4: CODE ANALYSIS AND DOCUMENTATION UPDATE (Optional) ---
+            if codebase_path:
+                logger.info("=" * 80)
+                logger.info("--- PHASE 4: Code Analysis and Documentation Update ---")
+                logger.info("=" * 80)
+                logger.info(f"📁 Analyzing codebase at: {codebase_path}")
+                
+                try:
+                    # Analyze codebase
+                    logger.info("🔍 Step 1: Analyzing codebase structure...")
+                    code_analysis = self.code_analyst.analyze_codebase(codebase_path)
+                    logger.info(f"  ✅ Code analysis complete: {len(code_analysis.get('modules', []))} modules, "
+                              f"{len(code_analysis.get('classes', []))} classes, "
+                              f"{len(code_analysis.get('functions', []))} functions")
+                    
+                    # Update API Documentation with code analysis
+                    logger.info("📝 Step 2: Updating API documentation based on actual code...")
+                    try:
+                        # Get existing API documentation
+                        api_doc_content = final_docs.get(AgentType.API_DOCUMENTATION)
+                        
+                        # Generate updated API documentation from code
+                        updated_api_doc = self.code_analyst.generate_code_documentation(
+                            code_analysis=code_analysis,
+                            existing_docs=api_doc_content
+                        )
+                        
+                        # Save updated API documentation
+                        api_doc_path = document_file_paths.get(AgentType.API_DOCUMENTATION)
+                        if api_doc_path:
+                            # Update the file
+                            if Path(api_doc_path).is_absolute():
+                                Path(api_doc_path).write_text(updated_api_doc, encoding='utf-8')
+                            else:
+                                self.file_manager.write_file(api_doc_path, updated_api_doc)
+                            
+                            # Update final_docs and context
+                            final_docs[AgentType.API_DOCUMENTATION] = updated_api_doc
+                            
+                            # Update context
+                            api_output = AgentOutput(
+                                agent_type=AgentType.API_DOCUMENTATION,
+                                document_type="api_documentation",
+                                content=updated_api_doc,
+                                file_path=api_doc_path,
+                                status=DocumentStatus.COMPLETE,
+                                generated_at=datetime.now(),
+                                dependencies=[]
+                            )
+                            self.context_manager.save_agent_output(project_id, api_output)
+                            
+                            logger.info(f"  ✅ API documentation updated: {api_doc_path}")
+                            results["status"]["api_documentation"] = "updated_with_code_analysis"
+                        else:
+                            logger.warning("  ⚠️  API documentation file path not found, creating new file")
+                            api_doc_path = self.file_manager.write_file("api_documentation.md", updated_api_doc)
+                            final_docs[AgentType.API_DOCUMENTATION] = updated_api_doc
+                            document_file_paths[AgentType.API_DOCUMENTATION] = api_doc_path
+                            results["files"]["api_documentation"] = api_doc_path
+                            results["status"]["api_documentation"] = "created_from_code_analysis"
+                    except Exception as e:
+                        logger.warning(f"  ⚠️  API documentation update failed: {e}")
+                    
+                    # Update Developer Documentation with code analysis
+                    logger.info("📝 Step 3: Updating developer documentation based on actual code...")
+                    try:
+                        # Get existing developer documentation
+                        dev_doc_content = final_docs.get(AgentType.DEVELOPER_DOCUMENTATION)
+                        
+                        # Generate updated developer documentation from code
+                        updated_dev_doc = self.code_analyst.generate_code_documentation(
+                            code_analysis=code_analysis,
+                            existing_docs=dev_doc_content
+                        )
+                        
+                        # Save updated developer documentation
+                        dev_doc_path = document_file_paths.get(AgentType.DEVELOPER_DOCUMENTATION)
+                        if dev_doc_path:
+                            # Update the file
+                            if Path(dev_doc_path).is_absolute():
+                                Path(dev_doc_path).write_text(updated_dev_doc, encoding='utf-8')
+                            else:
+                                self.file_manager.write_file(dev_doc_path, updated_dev_doc)
+                            
+                            # Update final_docs and context
+                            final_docs[AgentType.DEVELOPER_DOCUMENTATION] = updated_dev_doc
+                            
+                            # Update context
+                            dev_output = AgentOutput(
+                                agent_type=AgentType.DEVELOPER_DOCUMENTATION,
+                                document_type="developer_documentation",
+                                content=updated_dev_doc,
+                                file_path=dev_doc_path,
+                                status=DocumentStatus.COMPLETE,
+                                generated_at=datetime.now(),
+                                dependencies=[]
+                            )
+                            self.context_manager.save_agent_output(project_id, dev_output)
+                            
+                            logger.info(f"  ✅ Developer documentation updated: {dev_doc_path}")
+                            results["status"]["developer_documentation"] = "updated_with_code_analysis"
+                        else:
+                            logger.warning("  ⚠️  Developer documentation file path not found, creating new file")
+                            dev_doc_path = self.file_manager.write_file("developer_guide.md", updated_dev_doc)
+                            final_docs[AgentType.DEVELOPER_DOCUMENTATION] = updated_dev_doc
+                            document_file_paths[AgentType.DEVELOPER_DOCUMENTATION] = dev_doc_path
+                            results["files"]["developer_documentation"] = dev_doc_path
+                            results["status"]["developer_documentation"] = "created_from_code_analysis"
+                    except Exception as e:
+                        logger.warning(f"  ⚠️  Developer documentation update failed: {e}")
+                    
+                    # Save code analysis results
+                    logger.info("💾 Step 4: Saving code analysis results...")
+                    try:
+                        import json
+                        code_analysis_json = json.dumps(code_analysis, indent=2, default=str)
+                        code_analysis_path = self.file_manager.write_file("code_analysis.json", code_analysis_json)
+                        results["files"]["code_analysis"] = code_analysis_path
+                        results["status"]["code_analysis"] = "complete"
+                        logger.info(f"  ✅ Code analysis saved: {code_analysis_path}")
+                    except Exception as e:
+                        logger.warning(f"  ⚠️  Failed to save code analysis: {e}")
+                    
+                    logger.info("=" * 80)
+                    logger.info("✅ PHASE 4 COMPLETE: Code analysis and documentation update completed")
+                    logger.info("=" * 80)
+                    
+                except Exception as e:
+                    logger.error(f"  ❌ Phase 4 (Code Analysis) failed: {e}", exc_info=True)
+                    results["status"]["code_analysis"] = "failed"
+                    results["code_analysis_error"] = str(e)
+            else:
+                logger.debug("  Phase 4 skipped (no codebase_path provided)")
             
             # Optional: Auto-Fix Loop (can be enabled via ENABLE_AUTO_FIX=true)
             # Note: In hybrid mode, Phase 1 documents already went through quality gates

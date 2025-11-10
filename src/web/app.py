@@ -56,6 +56,7 @@ class GenerationRequest(BaseModel):
     project_id: Optional[str] = None
     profile: Optional[str] = "team"  # "team" or "individual"
     provider_name: Optional[str] = None  # LLM provider: "ollama", "gemini", "openai" (uses env var if None)
+    codebase_path: Optional[str] = None  # Optional path to codebase for code analysis (Phase 4)
 
 
 class GenerationResponse(BaseModel):
@@ -501,7 +502,8 @@ async def generate_docs(request: GenerationRequest, background_tasks: Background
             request.user_idea,
             project_id,
             request.profile,
-            request.provider_name
+            request.provider_name,
+            request.codebase_path
         )
         
         return GenerationResponse(
@@ -513,7 +515,13 @@ async def generate_docs(request: GenerationRequest, background_tasks: Background
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def run_generation(user_idea: str, project_id: str, profile: str = "team", provider_name: Optional[str] = None):
+def run_generation(
+    user_idea: str,
+    project_id: str,
+    profile: str = "team",
+    provider_name: Optional[str] = None,
+    codebase_path: Optional[str] = None
+):
     """Run documentation generation in background and update status in database"""
     # Use the global context_manager to ensure state is persisted
     # This allows status to survive server restarts
@@ -527,15 +535,21 @@ def run_generation(user_idea: str, project_id: str, profile: str = "team", provi
                 context_manager=local_context_manager,
                 provider_name=provider_name
             )
-            results = local_coordinator.generate_all_docs(user_idea, project_id, profile)
+            results = local_coordinator.generate_all_docs(
+                user_idea, project_id, profile, codebase_path=codebase_path
+            )
         else:
             # Use global coordinator (uses env var or default)
             # Ensure it uses the same context_manager for status persistence
             if coordinator:
-                results = coordinator.generate_all_docs(user_idea, project_id, profile)
+                results = coordinator.generate_all_docs(
+                    user_idea, project_id, profile, codebase_path=codebase_path
+                )
             else:
                 local_coordinator = WorkflowCoordinator(context_manager=local_context_manager)
-                results = local_coordinator.generate_all_docs(user_idea, project_id, profile)
+                results = local_coordinator.generate_all_docs(
+                    user_idea, project_id, profile, codebase_path=codebase_path
+                )
         
         # Update status in database
         local_context_manager.update_project_status(
