@@ -25,6 +25,12 @@ class AgentType(str, Enum):
     DATABASE_SCHEMA = "database_schema"
     SETUP_GUIDE = "setup_guide"
     
+    # Business & Marketing (Level 1-2)
+    MARKETING_PLAN = "marketing_plan"
+    BUSINESS_MODEL = "business_model"
+    SUPPORT_PLAYBOOK = "support_playbook"
+    LEGAL_COMPLIANCE = "legal_compliance"
+    
     # Cross-Level
     DEVELOPER_DOCUMENTATION = "developer_documentation"
     USER_DOCUMENTATION = "user_documentation"

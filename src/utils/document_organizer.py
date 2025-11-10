@@ -22,6 +22,8 @@ DOCUMENT_LEVEL_MAPPING = {
     "stakeholder_documentation": DocumentLevel.LEVEL_1_STRATEGIC,
     "stakeholder_communication": DocumentLevel.LEVEL_1_STRATEGIC,
     "project_charter": DocumentLevel.LEVEL_1_STRATEGIC,
+    "business_model": DocumentLevel.LEVEL_1_STRATEGIC,
+    "marketing_plan": DocumentLevel.LEVEL_1_STRATEGIC,
     
     # Level 2: Product (Product Manager)
     "pm_documentation": DocumentLevel.LEVEL_2_PRODUCT,
@@ -32,11 +34,13 @@ DOCUMENT_LEVEL_MAPPING = {
     "api_documentation": DocumentLevel.LEVEL_3_TECHNICAL,
     "database_schema": DocumentLevel.LEVEL_3_TECHNICAL,
     "setup_guide": DocumentLevel.LEVEL_3_TECHNICAL,
+    "legal_compliance": DocumentLevel.LEVEL_3_TECHNICAL,
     
     # Cross-Level (Everyone)
     "developer_documentation": DocumentLevel.CROSS_LEVEL,
     "user_documentation": DocumentLevel.CROSS_LEVEL,
     "test_documentation": DocumentLevel.CROSS_LEVEL,
+    "support_playbook": DocumentLevel.CROSS_LEVEL,
     "quality_reviewer": DocumentLevel.CROSS_LEVEL,
     "format_converter": DocumentLevel.CROSS_LEVEL,
     "claude_cli_documentation": DocumentLevel.CROSS_LEVEL,
@@ -58,6 +62,10 @@ DOCUMENT_DISPLAY_NAMES = {
     "developer_documentation": "Developer Guide",
     "user_documentation": "User Guide",
     "test_documentation": "Test Plan",
+    "business_model": "Business Model",
+    "marketing_plan": "Marketing Plan (GTM Strategy)",
+    "support_playbook": "Support Playbook",
+    "legal_compliance": "Legal & Compliance",
     "quality_reviewer": "Quality Review",
     "format_converter": "Format Conversions",
     "claude_cli_documentation": "Claude CLI Documentation",
