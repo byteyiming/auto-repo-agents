@@ -61,6 +61,7 @@ Thumbs.db
 !ENV_SETUP.md
 !OLLAMA_TOKEN_FIX.md
 !QUALITY_SCORES_ANALYSIS.md
+!SWITCH_LLM_PROVIDER.md
 
 
 # Documentation files (organized in docs/)

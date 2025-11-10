@@ -257,18 +257,50 @@ uv run python -m src.web.app
 
 ### Switch LLM Provider
 
+#### Method 1: Edit .env File (Recommended)
+
+```bash
+# Edit .env file
+nano .env
+
+# For Ollama (local)
+LLM_PROVIDER=ollama
+OLLAMA_DEFAULT_MODEL=dolphin3
+
+# For Gemini (cloud)
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+#### Method 2: Use Switch Scripts
+
+```bash
+# Switch to Ollama
+./scripts/switch-to-ollama.sh
+
+# Switch to Gemini
+./scripts/switch-to-gemini.sh
+
+# Check current provider
+./scripts/check-llm-provider.sh
+```
+
+#### Method 3: In Code
+
 ```python
 # Use Ollama (local)
 from src.agents.requirements_analyst import RequirementsAnalyst
 
 agent = RequirementsAnalyst(provider_name="ollama")
 
-# Use OpenAI
-agent = RequirementsAnalyst(provider_name="openai")
-
-# Use Gemini (default)
+# Use Gemini (cloud)
 agent = RequirementsAnalyst(provider_name="gemini")
+
+# Use OpenAI (cloud)
+agent = RequirementsAnalyst(provider_name="openai")
 ```
+
+**See [SWITCH_LLM_PROVIDER.md](SWITCH_LLM_PROVIDER.md) for detailed switching guide.**
 
 ### Multiple Provider Example
 
@@ -380,7 +412,9 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🔗 Related Documentation
 
 - [Environment Setup Guide](ENV_SETUP.md)
+- [Switch LLM Provider Guide](SWITCH_LLM_PROVIDER.md) - How to switch between Gemini and Ollama
 - [Ollama Token Fix Documentation](OLLAMA_TOKEN_FIX.md)
+- [Quality Scores Analysis](QUALITY_SCORES_ANALYSIS.md)
 - [Configuration Guide](src/config/README.md)
 - [Current Project Status](CURRENT_STATUS.md)
 
