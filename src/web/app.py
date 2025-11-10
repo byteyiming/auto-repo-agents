@@ -481,8 +481,8 @@ async def root():
 
 
 @app.post("/api/generate", response_model=GenerationResponse)
-async def generate_docs(request: GenerationRequest, background_tasks: BackgroundTasks):
-    """Start documentation generation"""
+async def generate_docs(request: GenerationRequest):
+    """Start documentation generation (async)"""
     try:
         project_id = request.project_id or f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
         
@@ -497,14 +497,16 @@ async def generate_docs(request: GenerationRequest, background_tasks: Background
             completed_agents=[]
         )
         
-        # Start generation in background
-        background_tasks.add_task(
-            run_generation,
-            request.user_idea,
-            project_id,
-            request.profile,
-            request.provider_name,
-            request.codebase_path
+        # Start generation asynchronously (non-blocking)
+        # Use asyncio.create_task to run in background
+        asyncio.create_task(
+            run_generation_async(
+                request.user_idea,
+                project_id,
+                request.profile,
+                request.provider_name,
+                request.codebase_path
+            )
         )
         
         return GenerationResponse(
@@ -516,6 +518,59 @@ async def generate_docs(request: GenerationRequest, background_tasks: Background
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def run_generation_async(
+    user_idea: str,
+    project_id: str,
+    profile: str = "team",
+    provider_name: Optional[str] = None,
+    codebase_path: Optional[str] = None
+):
+    """Run documentation generation asynchronously and update status in database"""
+    local_context_manager = context_manager if context_manager else ContextManager()
+    
+    try:
+        # Create a new coordinator with the specified provider
+        if provider_name:
+            local_coordinator = WorkflowCoordinator(
+                context_manager=local_context_manager,
+                provider_name=provider_name
+            )
+        else:
+            if coordinator:
+                local_coordinator = coordinator
+            else:
+                local_coordinator = WorkflowCoordinator(context_manager=local_context_manager)
+        
+        # Use async version if available, otherwise run sync in executor
+        if hasattr(local_coordinator, 'async_generate_all_docs'):
+            results = await local_coordinator.async_generate_all_docs(
+                user_idea, project_id, profile, codebase_path=codebase_path
+            )
+        else:
+            # Fallback: run sync version in executor
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(
+                None,
+                lambda: local_coordinator.generate_all_docs(
+                    user_idea, project_id, profile, codebase_path=codebase_path
+                )
+            )
+        
+        # Update status in database
+        local_context_manager.update_project_status(
+            project_id=project_id,
+            status="complete",
+            completed_agents=list(results.get("files", {}).keys()),
+            results=results
+        )
+    except Exception as e:
+        local_context_manager.update_project_status(
+            project_id=project_id,
+            status="failed",
+            error=str(e)
+        )
+
+
 def run_generation(
     user_idea: str,
     project_id: str,
@@ -523,15 +578,11 @@ def run_generation(
     provider_name: Optional[str] = None,
     codebase_path: Optional[str] = None
 ):
-    """Run documentation generation in background and update status in database"""
-    # Use the global context_manager to ensure state is persisted
-    # This allows status to survive server restarts
+    """Run documentation generation in background (sync version, kept for backward compatibility)"""
     local_context_manager = context_manager if context_manager else ContextManager()
     
     try:
-        # Create a new coordinator with the specified provider (or use global one if provider_name is None)
         if provider_name:
-            # Create coordinator with specific provider, but use shared context_manager for status
             local_coordinator = WorkflowCoordinator(
                 context_manager=local_context_manager,
                 provider_name=provider_name
@@ -540,8 +591,6 @@ def run_generation(
                 user_idea, project_id, profile, codebase_path=codebase_path
             )
         else:
-            # Use global coordinator (uses env var or default)
-            # Ensure it uses the same context_manager for status persistence
             if coordinator:
                 results = coordinator.generate_all_docs(
                     user_idea, project_id, profile, codebase_path=codebase_path
@@ -552,7 +601,6 @@ def run_generation(
                     user_idea, project_id, profile, codebase_path=codebase_path
                 )
         
-        # Update status in database
         local_context_manager.update_project_status(
             project_id=project_id,
             status="complete",
@@ -560,7 +608,6 @@ def run_generation(
             results=results
         )
     except Exception as e:
-        # Update status to failed in database
         local_context_manager.update_project_status(
             project_id=project_id,
             status="failed",
