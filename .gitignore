@@ -64,6 +64,9 @@ Thumbs.db
 !SWITCH_LLM_PROVIDER.md
 !HYBRID_MODE_GUIDE.md
 !CODE_SWITCH_PROVIDER.md
+!TEMPERATURE_CONFIG.md
+!SUMMARY_LENGTH_CONFIG.md
+!PDF_DOWNLOAD_SECURITY.md
 
 
 # Documentation files (organized in docs/)
