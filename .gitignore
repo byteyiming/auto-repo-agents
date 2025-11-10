@@ -68,6 +68,7 @@ Thumbs.db
 !SUMMARY_LENGTH_CONFIG.md
 !PDF_DOWNLOAD_SECURITY.md
 !OLLAMA_TIMEOUT_FIX.md
+!OLLAMA_500_ERROR_FIX.md
 
 
 # Documentation files (organized in docs/)
