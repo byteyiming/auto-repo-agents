@@ -13,6 +13,8 @@ from src.llm.base_provider import BaseLLMProvider
 from src.llm.provider_factory import ProviderFactory
 from src.utils.logger import get_logger
 from src.config.settings import get_settings
+from src.utils.error_handler import retry_with_backoff
+import requests
 
 logger = get_logger(__name__)
 
@@ -106,6 +108,17 @@ class BaseAgent(ABC):
         
         logger.info(f"{self.agent_name} initialized with provider: {self.provider_name}, model: {self.model_name}, temperature: {self.default_temperature}")
     
+    @retry_with_backoff(
+        max_retries=3,
+        initial_delay=2.0,
+        backoff_factor=2.0,
+        exceptions=(
+            ConnectionError,
+            TimeoutError,
+            requests.exceptions.RequestException,  # Catches all requests exceptions (Timeout, ConnectionError, etc.)
+            RuntimeError,  # For provider-level transient errors (e.g., "rate limit", "temporary failure")
+        )
+    )
     def _call_llm(
         self,
         prompt: str,
@@ -115,7 +128,14 @@ class BaseAgent(ABC):
         **kwargs
     ) -> str:
         """
-        Call LLM with rate limiting (protected method for subclasses)
+        Call LLM with rate limiting and retry logic (protected method for subclasses)
+        
+        This method includes automatic retry with exponential backoff for transient errors:
+        - Network errors (ConnectionError, TimeoutError)
+        - HTTP errors (requests exceptions)
+        - Transient runtime errors
+        
+        Non-retryable errors (e.g., ValueError, authentication errors) are immediately raised.
         
         Args:
             prompt: Input prompt
@@ -126,6 +146,12 @@ class BaseAgent(ABC):
             
         Returns:
             Model response text
+            
+        Raises:
+            ConnectionError: If connection fails after all retries
+            TimeoutError: If request times out after all retries
+            ValueError: If input is invalid (not retried)
+            RuntimeError: If API call fails after all retries
         """
         # Use agent's default temperature if not explicitly provided
         if temperature is None:
@@ -146,14 +172,19 @@ class BaseAgent(ABC):
         
         try:
             # Pass prompt as argument so it's included in cache key generation
+            # Rate limiter will handle rate limiting, retry decorator will handle transient errors
             response = self.rate_limiter.execute(make_request, prompt)
             logger.info(f"{self.agent_name} LLM call completed (response length: {len(response)} characters)")
             # Clean and validate response
             cleaned_response = self._clean_llm_response(response)
             return cleaned_response
-        except Exception as e:
-            logger.error(f"{self.agent_name} LLM call failed: {str(e)}", exc_info=True)
+        except (ValueError, KeyError, AttributeError) as e:
+            # Don't retry validation errors - these are permanent and won't be fixed by retrying
+            # These exceptions are raised BEFORE the retry decorator can handle them
+            logger.error(f"{self.agent_name} LLM call failed with validation error (not retried): {str(e)}", exc_info=True)
             raise
+        # All other exceptions (ConnectionError, TimeoutError, RuntimeError, requests exceptions)
+        # will be caught by the @retry_with_backoff decorator and retried with exponential backoff
     
     def _clean_llm_response(self, response: str) -> str:
         """
