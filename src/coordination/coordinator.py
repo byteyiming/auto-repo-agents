@@ -118,15 +118,12 @@ class WorkflowCoordinator:
         """
         Initialize workflow coordinator
         
-        NOTE: All agents are FORCED to use Gemini (no local models).
-        The provider_name and provider_config parameters are kept for backward compatibility
-        but are IGNORED - all agents will use Gemini regardless.
-        
         Args:
             context_manager: Context manager instance
             rate_limiter: Shared rate limiter for all agents
-            provider_name: (IGNORED - kept for backward compatibility) All agents use "gemini"
-            provider_config: (IGNORED - kept for backward compatibility) All agents use "gemini"
+            provider_name: Default provider name for all agents (if None, uses LLM_PROVIDER env var or settings)
+            provider_config: Optional dict mapping agent keys to provider names for per-agent configuration
+                           Example: {"requirements_analyst": "gemini", "api_agent": "ollama"}
         """
         settings = get_settings()
         self.context_manager = context_manager or ContextManager()
@@ -138,32 +135,47 @@ class WorkflowCoordinator:
         self.file_manager = FileManager(base_dir=settings.docs_dir)
         logger.info(f"WorkflowCoordinator initialized (environment: {settings.environment.value})")
         
-        # FORCE GEMINI FOR ALL AGENTS - NO LOCAL MODELS
-        # Override any environment variables or parameters to ensure all agents use Gemini
-        default_provider = os.getenv("LLM_PROVIDER") 
+        # Determine default provider
+        # Priority: provider_name parameter > LLM_PROVIDER env var > settings.default_llm_provider > "gemini"
+        if provider_name is None:
+            provider_name = os.getenv("LLM_PROVIDER") or settings.default_llm_provider or "gemini"
+        provider_name = provider_name.lower()
+        
+        # Parse provider_config (per-agent configuration)
         provider_config = provider_config or {}
+        self.provider_config = {k.lower(): v.lower() for k, v in provider_config.items()}
+        self.default_provider = provider_name
         
-        # Verify Gemini API key is available
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_api_key or gemini_api_key == "":
-            logger.warning("⚠️  GEMINI_API_KEY not found. Please set it in .env file.")
-            logger.warning("   All agents will use Gemini, but API calls will fail without a valid key.")
+        # Log provider configuration
+        logger.info(f"🔧 Provider configuration:")
+        logger.info(f"   Default provider: {self.default_provider}")
+        if self.provider_config:
+            logger.info(f"   Per-agent overrides: {len(self.provider_config)} agents")
+            for agent_key, agent_provider in self.provider_config.items():
+                logger.info(f"     - {agent_key}: {agent_provider}")
         else:
-            logger.info("✅ Gemini API key found. All agents will use Gemini.")
+            logger.info(f"   All agents using default provider: {self.default_provider}")
         
-        # All agents use Gemini (no hybrid mode, no local models, no exceptions)
-        logger.info("🚀 FORCED: All agents using Gemini (no local models)")
-        if provider_config:
-            # Override any custom config to use Gemini
-            logger.warning(f"⚠️  Custom provider_config provided: {provider_config}")
-            logger.warning("   Overriding to Gemini for all agents (no local models)")
-            provider_config = {}  # Clear custom config, force Gemini
-        
-        # Helper function to get provider for an agent (always returns gemini)
+        # Helper function to get provider for an agent
         def get_agent_provider(agent_key: str) -> str:
-            """Get provider for a specific agent (always returns gemini - no local models)"""
-            # Force Gemini for all agents, ignore any custom config
-            return "gemini"
+            """
+            Get provider for a specific agent
+            
+            Priority:
+            1. provider_config[agent_key] (per-agent override)
+            2. default_provider (from parameter or env var)
+            
+            Args:
+                agent_key: Agent identifier (e.g., "requirements_analyst")
+            
+            Returns:
+                Provider name (e.g., "gemini", "ollama", "openai")
+            """
+            # Check for per-agent override
+            if agent_key.lower() in self.provider_config:
+                return self.provider_config[agent_key.lower()]
+            # Use default provider
+            return self.default_provider
         
         # Initialize agents (shared rate limiter, with optional provider override)
         self.requirements_analyst = RequirementsAnalyst(
@@ -265,13 +277,11 @@ class WorkflowCoordinator:
             file_manager=self.file_manager
         )
         
-        # Log provider configuration
-        logger.info("✅ WorkflowCoordinator configured: ALL agents using Gemini (no local models)")
-        logger.info("   Provider: gemini (forced, no overrides)")
-        logger.info("   Model: gemini-2.0-flash (or GEMINI_DEFAULT_MODEL if set)")
-        logger.info("   Local models: DISABLED")
+        # Log final configuration summary
+        used_providers = set([self.default_provider] + list(self.provider_config.values()))
+        logger.info(f"✅ WorkflowCoordinator configured with {len(used_providers)} provider(s): {', '.join(sorted(used_providers))}")
         
-        logger.info("WorkflowCoordinator initialized with all agents (ALL using Gemini - no local models)")
+        logger.info("WorkflowCoordinator initialized with all agents")
     
     def _run_agent_with_quality_loop(
         self,
@@ -622,7 +632,7 @@ Improvement Suggestions:
                             file_path=v2_file_path,
                             status=DocumentStatus.COMPLETE,
                             generated_at=datetime.now()
-                        )
+                )
                         await loop.run_in_executor(
                             None,
                             lambda: self.context_manager.save_agent_output(project_id, output)
