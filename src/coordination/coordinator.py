@@ -1118,14 +1118,32 @@ Improvement Suggestions:
                 """Convert AgentType to document type name for results"""
                 return agent_type_to_doc_type.get(agent_type, agent_type.value)
             
-            # Collect parallel task results
+            # Collect parallel task results with resilient error handling
+            successful_tasks = []
+            failed_tasks = []
+            
             for task in phase2_tasks:
                 task_id = task.task_id
                 file_path = parallel_results.get(task_id)
                 agent_type = task.agent_type
                 doc_type = get_doc_type_from_agent_type(agent_type)
                 
-                if file_path and executor.tasks[task_id].status == TaskStatus.COMPLETE:
+                # Check task status from executor
+                task_status = executor.tasks.get(task_id)
+                if task_status and task_status.status == TaskStatus.FAILED:
+                    # Task failed - record error but continue processing other tasks
+                    error = task_status.error if task_status.error else "Unknown error"
+                    error_msg = str(error) if error else "Unknown error"
+                    logger.error(f"  ❌ Task {task_id} ({doc_type}) failed: {error_msg}")
+                    results["status"][doc_type] = "failed"
+                    failed_tasks.append({
+                        "task_id": task_id,
+                        "doc_type": doc_type,
+                        "agent_type": agent_type.value,
+                        "error": error_msg
+                    })
+                elif file_path and task_status and task_status.status == TaskStatus.COMPLETE:
+                    # Task succeeded
                     results["files"][doc_type] = file_path
                     results["status"][doc_type] = "complete"
                     
@@ -1135,16 +1153,52 @@ Improvement Suggestions:
                         final_docs[agent_type] = content
                         document_file_paths[agent_type] = file_path
                         logger.info(f"  ✅ {doc_type}: {file_path}")
+                        successful_tasks.append({
+                            "task_id": task_id,
+                            "doc_type": doc_type,
+                            "agent_type": agent_type.value,
+                            "file_path": file_path
+                        })
                     except Exception as e:
                         logger.warning(f"  ⚠️  Could not read {doc_type}: {e}")
+                        # Mark as failed if we can't read the file
+                        results["status"][doc_type] = "failed"
+                        failed_tasks.append({
+                            "task_id": task_id,
+                            "doc_type": doc_type,
+                            "agent_type": agent_type.value,
+                            "error": f"Failed to read file: {str(e)}"
+                        })
                 else:
-                    error = executor.tasks[task_id].error if task_id in executor.tasks else "Unknown error"
-                    logger.error(f"  ❌ Task {task_id} failed: {error}")
-                    results["status"][doc_type] = "failed"
+                    # Task status unknown or incomplete
+                    logger.warning(f"  ⚠️  Task {task_id} ({doc_type}) has unknown status")
+                    results["status"][doc_type] = "unknown"
+                    failed_tasks.append({
+                        "task_id": task_id,
+                        "doc_type": doc_type,
+                        "agent_type": agent_type.value,
+                        "error": "Task status unknown or incomplete"
+                    })
             
+            # Log Phase 2 summary with success/failure breakdown
             logger.info("=" * 80)
-            logger.info(f"✅ PHASE 2 COMPLETE: {len([r for r in parallel_results.values() if r])} documents generated in parallel")
+            logger.info(f"✅ PHASE 2 COMPLETE: {len(successful_tasks)}/{len(phase2_tasks)} documents generated successfully")
+            if successful_tasks:
+                logger.info(f"   ✅ Successful: {', '.join([t['doc_type'] for t in successful_tasks])}")
+            if failed_tasks:
+                logger.warning(f"   ❌ Failed: {', '.join([t['doc_type'] for t in failed_tasks])}")
+                for failed_task in failed_tasks:
+                    logger.warning(f"      - {failed_task['doc_type']}: {failed_task['error']}")
             logger.info("=" * 80)
+            
+            # Store task execution summary in results for Phase 3 reporting
+            results["phase2_summary"] = {
+                "successful": successful_tasks,
+                "failed": failed_tasks,
+                "total": len(phase2_tasks),
+                "success_count": len(successful_tasks),
+                "failed_count": len(failed_tasks)
+            }
             
             # --- PHASE 3: FINAL PACKAGING (Cross-ref, Review, Convert) ---
             logger.info("=" * 80)
@@ -1274,6 +1328,72 @@ Improvement Suggestions:
             logger.info("=" * 80)
             logger.info("✅ PHASE 3 COMPLETE: Final packaging and conversion completed")
             logger.info("=" * 80)
+            
+            # Generate final execution summary report
+            logger.info("=" * 80)
+            logger.info("📊 FINAL EXECUTION SUMMARY")
+            logger.info("=" * 80)
+            
+            # Count successful and failed documents across all phases
+            all_successful_docs = []
+            all_failed_docs = []
+            
+            # Phase 1 documents (from results["status"])
+            phase1_doc_types = ["requirements", "project_charter", "user_stories", "technical_documentation", "database_schema"]
+            for doc_type in phase1_doc_types:
+                if doc_type in results.get("status", {}):
+                    if results["status"][doc_type] == "complete" or results["status"][doc_type] == "complete_v2":
+                        all_successful_docs.append(doc_type)
+                    elif results["status"][doc_type] == "failed":
+                        all_failed_docs.append(doc_type)
+            
+            # Phase 2 documents (from phase2_summary)
+            if "phase2_summary" in results:
+                phase2_summary = results["phase2_summary"]
+                for task in phase2_summary.get("successful", []):
+                    all_successful_docs.append(task["doc_type"])
+                for task in phase2_summary.get("failed", []):
+                    all_failed_docs.append(task["doc_type"])
+            
+            # Phase 3 documents (quality_review, claude_cli_documentation, format_conversions, document_index)
+            phase3_doc_types = ["quality_review", "claude_cli_documentation", "format_conversions", "document_index"]
+            for doc_type in phase3_doc_types:
+                if doc_type in results.get("status", {}):
+                    status = results["status"][doc_type]
+                    if status == "complete" or "partial" in status.lower():
+                        all_successful_docs.append(doc_type)
+                    elif status == "failed" or status == "skipped":
+                        all_failed_docs.append(doc_type)
+            
+            # Log summary
+            total_docs = len(all_successful_docs) + len(all_failed_docs)
+            success_count = len(all_successful_docs)
+            failed_count = len(all_failed_docs)
+            
+            logger.info(f"📈 Total Documents: {total_docs}")
+            logger.info(f"✅ Successful: {success_count} ({success_count/total_docs*100:.1f}%)" if total_docs > 0 else "✅ Successful: 0")
+            logger.info(f"❌ Failed: {failed_count} ({failed_count/total_docs*100:.1f}%)" if total_docs > 0 else "❌ Failed: 0")
+            
+            if all_successful_docs:
+                logger.info(f"   ✅ Generated: {', '.join(sorted(set(all_successful_docs)))}")
+            if all_failed_docs:
+                logger.warning(f"   ❌ Failed: {', '.join(sorted(set(all_failed_docs)))}")
+                # Log detailed error information for failed tasks
+                if "phase2_summary" in results:
+                    for failed_task in results["phase2_summary"].get("failed", []):
+                        logger.warning(f"      - {failed_task['doc_type']}: {failed_task.get('error', 'Unknown error')}")
+            
+            logger.info("=" * 80)
+            
+            # Store final summary in results
+            results["execution_summary"] = {
+                "total_documents": total_docs,
+                "successful_count": success_count,
+                "failed_count": failed_count,
+                "success_rate": success_count / total_docs * 100 if total_docs > 0 else 0,
+                "successful_documents": sorted(set(all_successful_docs)),
+                "failed_documents": sorted(set(all_failed_docs))
+            }
             
             # --- PHASE 4: CODE ANALYSIS AND DOCUMENTATION UPDATE (Optional) ---
             if codebase_path:
