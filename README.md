@@ -76,8 +76,8 @@ uv run python -m src.web.app
 
 - **21 Documentation Agents**: Requirements, PM, Technical, API, Developer, Stakeholder, User, Test, Quality Review, Format Converter, Business Model, Marketing Plan, Legal Compliance, Database Schema, Setup Guide, User Stories, Support Playbook, and more
 - **Hybrid Workflow**: 
-  - **Phase 1 (Quality Gates)**: Foundational documents use iterative quality loops (generate → check → improve) to ensure maximum quality
-  - **Phase 2 (Parallel Execution)**: Secondary documents generated in parallel using DAG-based async execution (3x faster)
+  - **Phase 1 (Quality Gates with DAG)**: Foundational documents (Requirements, Project Charter, User Stories, Technical Documentation, Database Schema) use DAG-based parallel execution with iterative quality loops (generate → check → improve) to ensure maximum quality
+  - **Phase 2 (Parallel Execution)**: Secondary documents generated in parallel using DAG-based async execution with dependency resolution (3x faster)
   - **Phase 3 (Final Packaging)**: Cross-referencing, quality review, and format conversion
   - **Phase 4 (Code Analysis)**: Optional codebase analysis and documentation updates
 - **LLM Provider**: 
@@ -186,30 +186,46 @@ OmniDoc/
 - `DOCS_DIR`: Output directory for generated docs (default: `docs/`)
 - `RATE_LIMIT_PER_MINUTE`: Rate limit for API calls (default: `50`)
 
-**Note**: All agents use Gemini (hardcoded). Environment variables for other providers are ignored.
+### LLM Provider Configuration
 
-### Model Configuration
-
-**All agents use Gemini** (hardcoded for consistency and quality). You can configure which Gemini model to use:
+**Multiple LLM providers are supported** (Gemini, Ollama, OpenAI). You can configure the provider via environment variables or per-agent configuration:
 
 #### Method 1: Environment Variable (Recommended)
 
 ```bash
 # In .env file
+# Choose your LLM provider
+LLM_PROVIDER=gemini  # Options: gemini, ollama, openai
+
+# Gemini configuration
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_DEFAULT_MODEL=gemini-2.0-flash  # Optional: default is gemini-2.0-flash
+
+# Ollama configuration (if LLM_PROVIDER=ollama)
+OLLAMA_BASE_URL=http://localhost:11434  # Optional
+OLLAMA_MODEL=dolphin3  # Optional
+
+# OpenAI configuration (if LLM_PROVIDER=openai)
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4o-mini  # Optional
 ```
 
-#### Method 2: Code Override
+#### Method 2: Per-Agent Provider Configuration
 
 ```python
 from src.coordination.coordinator import WorkflowCoordinator
 
-# All agents will use Gemini (default model: gemini-2.0-flash)
+# Default provider for all agents (from LLM_PROVIDER env var)
 coordinator = WorkflowCoordinator()
 
-# To use a different model, set GEMINI_DEFAULT_MODEL environment variable
-# or modify the default in src/llm/gemini_provider.py
+# Per-agent provider overrides (e.g., use gemini-2.5-pro for Phase 1, gemini-2.0-flash for Phase 2)
+coordinator = WorkflowCoordinator(
+    provider_config={
+        "requirements_analyst": "gemini",
+        "technical_documentation": "gemini",
+        "api_documentation": "gemini",
+    }
+)
 ```
 
 #### Available Models
@@ -246,16 +262,16 @@ results = coordinator.generate_all_docs(
 )
 
 # Generates 20+ document types using Hybrid Workflow:
-# Phase 1 (Quality Gates):
+# Phase 1 (Quality Gates with DAG - Parallel execution with dependencies):
 # - Requirements (iterative quality loop)
 # - Project Charter (team only, iterative quality loop)
-# - User Stories (iterative quality loop)
-# - Technical Specification (iterative quality loop)
+# - User Stories (iterative quality loop, depends on Requirements and Project Charter)
+# - Technical Specification (iterative quality loop, depends on Requirements and User Stories)
+# - Database Schema (iterative quality loop, depends on Requirements and Technical Documentation)
 #
-# Phase 2 (Parallel Execution):
-# - API Documentation
-# - Database Schema
-# - Setup Guide
+# Phase 2 (Parallel Execution with DAG):
+# - API Documentation (depends on Technical Documentation and Database Schema)
+# - Setup Guide (depends on API Documentation, Technical Documentation, and Database Schema)
 # - Developer Guide
 # - Test Plan
 # - User Guide
@@ -379,10 +395,11 @@ If you see API errors:
 
 If generated documents have low quality scores:
 
-1. **Use a better model**: Switch to `gemini-2.5-flash` or `gemini-2.5-pro` via `GEMINI_DEFAULT_MODEL`
+1. **Use a better model**: Switch to `gemini-2.5-flash` or `gemini-2.5-pro` via `GEMINI_DEFAULT_MODEL`, or use per-agent provider configuration for Phase 1 tasks
 2. **Adjust temperature**: Lower temperature (0.3) for more consistent output
-3. **Quality gates**: Phase 1 documents automatically improve if quality is below threshold
-4. **Check prompts**: Review system prompts in `src/prompts/system_prompts.py`
+3. **Quality gates**: Phase 1 documents automatically improve if quality is below threshold, using structured LLM-as-Judge feedback for precise improvements
+4. **Check prompts**: Review system prompts in `prompts/system_prompts.py` (includes readability guidelines)
+5. **Structured feedback**: The system uses LLM-as-Judge to provide structured JSON feedback for more precise document improvements
 
 ### WebSocket Connection Issues
 
@@ -439,16 +456,19 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🎯 Key Features
 
-### All Agents Use Gemini
-- **Hardcoded**: All 21 agents use Gemini (cannot be changed via environment variables)
-- **Default Model**: `gemini-2.0-flash` (balanced quality and speed)
-- **Configurable**: Set `GEMINI_DEFAULT_MODEL` environment variable to use a different model
-- **Benefits**: Consistent quality, no local model dependencies, cloud-based scalability
+### Multiple LLM Provider Support
+- **Configurable Providers**: Gemini (default), Ollama (local), OpenAI (GPT models)
+- **Default Provider**: `gemini` (configurable via `LLM_PROVIDER` environment variable)
+- **Per-Agent Configuration**: Optional per-agent provider overrides for hybrid setups
+- **Gemini Models**: `gemini-2.0-flash` (recommended), `gemini-2.5-flash`, `gemini-2.5-pro`
+- **Ollama Models**: Any Ollama model (e.g., `dolphin3`, `llama3`, `mistral`)
+- **OpenAI Models**: `gpt-4o-mini`, `gpt-4o`, `gpt-3.5-turbo`
+- **Benefits**: Flexibility, cost optimization, local development support, hybrid configurations
 
 ### Hybrid Workflow
-- **Phase 1**: Quality gates with iterative improvement for foundational documents
-- **Phase 2**: Parallel execution with DAG-based dependencies for maximum speed
-- **Phase 3**: Final packaging with cross-referencing and format conversion
+- **Phase 1**: DAG-based parallel execution with quality gates and iterative improvement for foundational documents (Requirements, Project Charter, User Stories, Technical Documentation, Database Schema)
+- **Phase 2**: Parallel execution with DAG-based dependencies for maximum speed (API Documentation, Setup Guide, Developer Documentation, etc.)
+- **Phase 3**: Final packaging with cross-referencing, quality review, and format conversion
 - **Phase 4**: Optional code analysis and documentation updates
 
 ### Real-Time Progress Updates
@@ -458,9 +478,11 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ### Quality Assurance
 - **Document-Type-Specific**: Quality checks tailored to each document type
-- **Automatic Improvement**: Low-quality documents are automatically improved
+- **Automatic Improvement**: Low-quality documents are automatically improved using structured LLM-as-Judge feedback
 - **Quality Thresholds**: Configurable quality thresholds for each document type
 - **Quality Reports**: Comprehensive quality reports for all documents
+- **Structured Feedback**: LLM-as-Judge provides structured JSON feedback for precise document improvement
+- **Readability Guidelines**: All prompts include readability guidelines for better document quality
 
 ## 📚 Additional Resources
 
@@ -471,20 +493,22 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🔄 Workflow Overview
 
-DOCU-GEN uses a **Hybrid Workflow** that combines quality gates with parallel execution:
+DOCU-GEN uses a **Hybrid Workflow** that combines quality gates with DAG-based parallel execution:
 
-1. **Phase 1 (Quality Gates)**: Foundational documents (Requirements, Project Charter, User Stories, Technical Documentation) are generated with iterative quality loops to ensure maximum quality
-2. **Phase 2 (Parallel Execution)**: Secondary documents are generated in parallel using DAG-based async execution for maximum speed
-3. **Phase 3 (Final Packaging)**: Cross-referencing, quality review, and format conversion
+1. **Phase 1 (Quality Gates with DAG)**: Foundational documents (Requirements, Project Charter, User Stories, Technical Documentation, Database Schema) are generated in parallel using DAG-based execution with iterative quality loops to ensure maximum quality. Tasks execute in parallel while respecting dependencies (e.g., Database Schema depends on Technical Documentation).
+2. **Phase 2 (Parallel Execution with DAG)**: Secondary documents are generated in parallel using DAG-based async execution with dependency resolution for maximum speed. Tasks continue executing even if some tasks fail, with comprehensive error reporting.
+3. **Phase 3 (Final Packaging)**: Cross-referencing, quality review (with structured LLM-as-Judge feedback), and format conversion
 4. **Phase 4 (Code Analysis)**: Optional codebase analysis and documentation updates
 
 See [WORKFLOW_DOCUMENTATION.md](WORKFLOW_DOCUMENTATION.md) for detailed workflow documentation.
 
 ## ⚙️ Architecture
 
-- **All Agents Use Gemini**: Hardcoded in Coordinator for consistency and quality
-- **Async Execution**: Phase 2 agents use native async support for better performance
-- **DAG-Based Dependencies**: Phase 2 tasks use directed acyclic graph for dependency management
-- **Quality Gates**: Phase 1 documents use iterative quality loops (generate → check → improve)
-- **Stateless Web App**: Uses SQLite database for project context and status
-- **WebSocket Support**: Real-time progress updates (falls back to polling if WebSocket fails)
+- **Multiple LLM Providers**: Supports Gemini, Ollama, and OpenAI with configurable per-agent provider selection
+- **Async Execution**: Phase 1 and Phase 2 agents use native async support for better performance
+- **DAG-Based Dependencies**: Phase 1 and Phase 2 tasks use directed acyclic graph for dependency management and parallel execution
+- **Quality Gates**: Phase 1 documents use iterative quality loops (generate → check → improve) with structured LLM-as-Judge feedback
+- **Task Resilience**: Phase 2 tasks continue executing even if some tasks fail, with comprehensive error reporting
+- **Stateless Web App**: Uses SQLite database for project context and status (no in-memory state)
+- **WebSocket Support**: Real-time progress updates with WebSocket status display and automatic fallback to HTTP polling
+- **Structured Quality Feedback**: LLM-as-Judge provides structured JSON feedback for precise document improvement

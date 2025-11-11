@@ -72,9 +72,21 @@ export LOG_LEVEL=DEBUG
 export LOG_FORMAT=json  # or 'text'
 export LOG_DIR=logs
 
-# LLM
-export LLM_PROVIDER=gemini
+# LLM Provider Configuration
+export LLM_PROVIDER=gemini  # Options: gemini, ollama, openai
 export RATE_LIMIT_PER_MINUTE=60
+
+# Gemini Configuration (if LLM_PROVIDER=gemini)
+export GEMINI_API_KEY=your_gemini_api_key_here
+export GEMINI_DEFAULT_MODEL=gemini-2.0-flash  # Optional
+
+# Ollama Configuration (if LLM_PROVIDER=ollama)
+export OLLAMA_BASE_URL=http://localhost:11434  # Optional
+export OLLAMA_MODEL=dolphin3  # Optional
+
+# OpenAI Configuration (if LLM_PROVIDER=openai)
+export OPENAI_API_KEY=your_openai_api_key_here
+export OPENAI_MODEL=gpt-4o-mini  # Optional
 
 # Directories
 export DOCS_DIR=docs
