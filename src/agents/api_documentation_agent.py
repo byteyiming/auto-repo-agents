@@ -46,25 +46,57 @@ class APIDocumentationAgent(BaseAgent):
         
         self.file_manager = file_manager or FileManager(base_dir="docs/api")
     
-    def generate(self, requirements_summary: dict, technical_summary: Optional[str] = None) -> str:
+    def generate(
+        self, 
+        requirements_summary: dict, 
+        technical_summary: Optional[str] = None,
+        database_schema_summary: Optional[str] = None
+    ) -> str:
         """
         Generate API documentation from requirements and technical specs
         
         Args:
             requirements_summary: Summary from Requirements Analyst
             technical_summary: Optional technical documentation summary
+            database_schema_summary: Optional database schema summary with detailed SQL schemas
         
         Returns:
             Generated API documentation (Markdown)
         """
         # Get prompt from centralized prompts config
-        full_prompt = get_api_prompt(requirements_summary, technical_summary)
-        
-        
-        stats = self.get_stats()
+        full_prompt = get_api_prompt(requirements_summary, technical_summary, database_schema_summary)
         
         try:
             api_doc = self._call_llm(full_prompt)
+            return api_doc
+        except Exception as e:
+            raise
+    
+    async def async_generate(
+        self, 
+        requirements_summary: dict, 
+        technical_summary: Optional[str] = None,
+        database_schema_summary: Optional[str] = None
+    ) -> str:
+        """
+        Generate API documentation from requirements and technical specs (async)
+        
+        Overrides base class to use native async LLM calls for better performance.
+        
+        Args:
+            requirements_summary: Summary from Requirements Analyst
+            technical_summary: Optional technical documentation summary
+            database_schema_summary: Optional database schema summary with detailed SQL schemas
+        
+        Returns:
+            Generated API documentation (Markdown)
+        """
+        # Get prompt from centralized prompts config
+        full_prompt = get_api_prompt(requirements_summary, technical_summary, database_schema_summary)
+        
+        try:
+            # Use async LLM call for better performance
+            api_doc = await self._async_call_llm(full_prompt)
             return api_doc
         except Exception as e:
             raise
@@ -73,25 +105,27 @@ class APIDocumentationAgent(BaseAgent):
         self,
         requirements_summary: dict,
         technical_summary: Optional[str] = None,
+        database_schema_summary: Optional[str] = None,
         output_filename: str = "api_documentation.md",
         project_id: Optional[str] = None,
         context_manager: Optional[ContextManager] = None
     ) -> str:
         """
-        Generate API documentation and save to file
+        Generate API documentation and save to file (sync version)
         
         Args:
             requirements_summary: Summary from Requirements Analyst
             technical_summary: Optional technical documentation summary
+            database_schema_summary: Optional database schema summary with detailed SQL schemas
             output_filename: Filename to save
             project_id: Project ID for context sharing
             context_manager: Context manager for saving
-            
+        
         Returns:
             Absolute path to saved file
         """
         # Generate documentation
-        api_doc = self.generate(requirements_summary, technical_summary)
+        api_doc = self.generate(requirements_summary, technical_summary, database_schema_summary)
         
         # Save to file
         try:
@@ -113,4 +147,55 @@ class APIDocumentationAgent(BaseAgent):
             return file_path
         except Exception as e:
             raise
+    
+    async def async_generate_and_save(
+        self,
+        requirements_summary: dict,
+        technical_summary: Optional[str] = None,
+        database_schema_summary: Optional[str] = None,
+        output_filename: str = "api_documentation.md",
+        project_id: Optional[str] = None,
+        context_manager: Optional[ContextManager] = None
+    ) -> str:
+        """
+        Generate API documentation and save to file (async version)
+        
+        Args:
+            requirements_summary: Summary from Requirements Analyst
+            technical_summary: Optional technical documentation summary
+            database_schema_summary: Optional database schema summary with detailed SQL schemas
+            output_filename: Filename to save
+            project_id: Project ID for context sharing
+            context_manager: Context manager for saving
+        
+        Returns:
+            Absolute path to saved file
+        """
+        import asyncio
+        # Generate documentation (async)
+        api_doc = await self.async_generate(requirements_summary, technical_summary, database_schema_summary)
+        
+        # Save to file (file I/O is fast, but we can make it async too if needed)
+        loop = asyncio.get_event_loop()
+        file_path = await loop.run_in_executor(
+            None,
+            lambda: self.file_manager.write_file(output_filename, api_doc)
+        )
+        
+        # Save to context (async)
+        if project_id and context_manager:
+            output = AgentOutput(
+                agent_type=AgentType.API_DOCUMENTATION,
+                document_type="api_documentation",
+                content=api_doc,
+                file_path=file_path,
+                status=DocumentStatus.COMPLETE,
+                generated_at=datetime.now()
+            )
+        await loop.run_in_executor(
+            None,
+            lambda: context_manager.save_agent_output(project_id, output)
+        )
+        
+        return file_path
 

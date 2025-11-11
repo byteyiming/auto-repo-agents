@@ -133,11 +133,16 @@ The document must include these sections:
    - Development tools
 
 3. ## Database Design
-   - Database schema with SPECIFIC tables, columns, data types, and constraints
-   - Key data models with actual field definitions
-   - Relationships and foreign keys with specific table relationships
-   - Indexing strategy with specific indexes
-   - Provide at least 5-10 core database tables with full schema definitions
+   - Database type and version (e.g., PostgreSQL 15, MySQL 8.0)
+   - High-level database architecture (single/multi-tenant, sharding strategy, etc.)
+   - Core database tables overview (table names and purposes, 5-10 core tables)
+   - Key data models with field names and data types (high-level, not full SQL)
+   - Relationships and foreign keys overview (which tables relate to which)
+   - Indexing strategy overview (what should be indexed and why)
+   - Database design patterns and rationale
+   - NOTE: Include database design OVERVIEW and ARCHITECTURE, but DO NOT include detailed SQL CREATE TABLE statements.
+     The detailed SQL schemas will be generated separately in the Database Schema document.
+     Focus on the DESIGN DECISIONS and ARCHITECTURE, not the implementation SQL.
 
 4. ## API Design
    - API architecture pattern (REST, GraphQL, etc.) with rationale
@@ -167,7 +172,12 @@ Format requirements:
 - Include concrete examples - database schemas, API endpoint designs, code snippets
 - DO NOT write generic documentation - write specific technical specifications
 
-CRITICAL: The technical specification must contain actionable, implementable technical designs. A developer should be able to use this document to start building the system. Include specific database table schemas, API endpoint definitions, technology versions, and architecture decisions.
+CRITICAL: The technical specification must contain actionable, implementable technical designs. A developer should be able to use this document to understand the system architecture. 
+- Include database design OVERVIEW (table names, purposes, relationships, indexing strategy)
+- Include API endpoint definitions with paths, methods, and data structures
+- Include technology versions and architecture decisions
+- NOTE: Database design should be at the ARCHITECTURE level (what tables exist, what they store, how they relate).
+  Detailed SQL CREATE TABLE statements will be in the Database Schema document.
 
 IMPORTANT OUTPUT FORMAT:
 - DO NOT wrap your response in markdown code blocks (no ```markdown)
@@ -771,8 +781,12 @@ Generate the complete technical specification document based on Level 2 outputs:
     return final_prompt
 
 
-def get_api_prompt(requirements_summary: dict, technical_summary: Optional[str] = None) -> str:
-    """Get full API documentation prompt - Level 3 must use Technical Spec"""
+def get_api_prompt(
+    requirements_summary: dict, 
+    technical_summary: Optional[str] = None,
+    database_schema_summary: Optional[str] = None
+) -> str:
+    """Get full API documentation prompt - Level 3 must use Technical Spec and Database Schema"""
     
     # LEVEL 3: Must use Level 3 Technical Documentation as PRIMARY source
     if not technical_summary:
@@ -783,15 +797,49 @@ def get_api_prompt(requirements_summary: dict, technical_summary: Optional[str] 
         technical_summary,
         document_type="technical documentation",
         target_agent="api_documentation",
-        focus_areas=["API endpoints and routes", "database schema", "authentication mechanisms", "error handling patterns", "system architecture"]
+        focus_areas=["API endpoints and routes", "authentication mechanisms", "error handling patterns", "system architecture"]
     ) if len(technical_summary) > 4000 else technical_summary
     
     context = f"""
 === LEVEL 3: API Documentation ===
-You are generating Level 3 API documentation, which MUST be based on Technical Documentation output.
+You are generating Level 3 API documentation, which MUST be based on Technical Documentation and Database Schema outputs.
 
 PRIMARY SOURCE - Technical Documentation (Level 3):
 {tech_summary}
+"""
+    
+    # Add database schema information if available
+    if database_schema_summary:
+        db_summary = summarize_document(
+            database_schema_summary,
+            document_type="database schema",
+            target_agent="api_documentation",
+            focus_areas=["table structures", "column definitions", "primary keys", "foreign keys", "indexes", "data types", "constraints"]
+        ) if len(database_schema_summary) > 3000 else database_schema_summary
+        
+        context += f"""
+
+DATABASE SCHEMA - Detailed SQL Schemas (Level 3):
+{db_summary}
+
+CRITICAL INSTRUCTIONS:
+1. Extract API design patterns and system architecture from Technical Documentation above
+2. Use the DETAILED database schema (tables, columns, relationships) from Database Schema above
+3. Design SPECIFIC REST API endpoints that work with the EXACT database tables and columns defined
+4. Create endpoints that perform CRUD operations on the database tables
+5. Use the authentication and error handling patterns from Technical Documentation
+6. DO NOT repeat requirements or generic information - create specific API endpoint documentation
+
+Each API endpoint must:
+- Support the user stories defined in Level 2
+- Work with the EXACT database tables and columns from Database Schema (use actual table names and column names)
+- Perform CRUD operations that match the database schema structure
+- Follow the authentication mechanisms specified in Technical Documentation
+- Implement the error handling patterns from Technical Documentation
+- Return data structures that match the database schema (e.g., if a table has columns id, name, email, the API response should include these fields)
+"""
+    else:
+        context += """
 
 CRITICAL INSTRUCTIONS:
 1. Extract API design patterns, database schema, and system architecture from Technical Documentation above
@@ -811,7 +859,7 @@ Each API endpoint must:
 
 {context}
 
-REMEMBER: You are Level 3. Use Technical Documentation as your PRIMARY source. Now generate SPECIFIC API documentation with actual endpoints:"""
+REMEMBER: You are Level 3. Use Technical Documentation and Database Schema as your PRIMARY sources. Now generate SPECIFIC API documentation with actual endpoints that work with the database schema:"""
 
 
 def get_developer_prompt(requirements_summary: dict, technical_summary: Optional[str] = None, api_summary: Optional[str] = None) -> str:
@@ -1311,17 +1359,20 @@ Generate the complete User Stories and Epics document based on the Project Chart
 
 
 # Database Schema Agent Prompt - Level 3: Technical
-DATABASE_SCHEMA_PROMPT = """You are a Database Architect specializing in creating comprehensive database schema documentation.
+DATABASE_SCHEMA_PROMPT = """You are a Database Architect specializing in creating comprehensive database schema documentation with detailed SQL implementations.
 
-🚨 CRITICAL: Your task is to generate DATABASE SCHEMA documentation with SQL CREATE TABLE statements, NOT a requirements document.
+🚨 CRITICAL: Your task is to generate DATABASE SCHEMA documentation with DETAILED SQL CREATE TABLE statements, NOT a requirements document or design overview.
 - DO NOT copy or repeat the requirements document content
-- Generate SPECIFIC database tables with columns, data types, constraints, and relationships
-- Include ACTUAL SQL CREATE TABLE statements
-- Design indexes, foreign keys, and data integrity rules
-- This is a TECHNICAL DATABASE design document, not a requirements list
-- If you see requirements or technical specs below, use them ONLY as reference to design the database schema
+- DO NOT just repeat the database design overview from Technical Documentation
+- Generate SPECIFIC database tables with COMPLETE SQL CREATE TABLE statements
+- Include ACTUAL SQL with exact column definitions, data types, constraints, and relationships
+- Design indexes, foreign keys, and data integrity rules with SQL statements
+- This is a TECHNICAL DATABASE IMPLEMENTATION document with executable SQL, not a design overview
+- Technical Documentation provides the database DESIGN OVERVIEW (what to build)
+- You provide the SQL IMPLEMENTATION (how to build it)
 
-CRITICAL: Generate SPECIFIC database schemas with actual tables, columns, data types, and relationships - not just generic database information. Design concrete database structures based on the technical specifications.
+CRITICAL: Generate COMPLETE, EXECUTABLE SQL CREATE TABLE statements with actual tables, columns, data types, constraints, and relationships. 
+The Technical Documentation tells you WHAT tables to create. You provide the HOW - the detailed SQL implementation.
 
 Based on the project requirements and technical specifications, generate a detailed Database Schema document in Markdown format with SPECIFIC table definitions.
 
@@ -1419,11 +1470,19 @@ PRIMARY SOURCE - Technical Documentation (Level 3):
 {summarize_document(technical_summary, document_type="technical documentation", target_agent="database_schema", focus_areas=["database design patterns", "data models", "entity relationships", "database schema"]) if len(technical_summary) > 4000 else technical_summary}
 
 CRITICAL INSTRUCTIONS:
-1. Extract database design patterns, data models, and entity relationships from Technical Documentation above
-2. If Technical Documentation includes database design, EXPAND and DETAIL it with full SQL schemas
-3. If not detailed, design SPECIFIC database tables based on the technical architecture described
-4. Create tables that support the user stories from Level 2 and the system architecture from Technical Documentation
-5. DO NOT repeat requirements - design concrete database structures
+1. Extract database design OVERVIEW from Technical Documentation above (table names, purposes, relationships, field names, data types)
+2. Technical Documentation provides the DATABASE DESIGN OVERVIEW and ARCHITECTURE
+3. Your task is to EXPAND the database design overview into DETAILED SQL IMPLEMENTATION
+4. Convert the database design overview into complete SQL CREATE TABLE statements with:
+   - Exact column definitions with data types (VARCHAR, INT, TIMESTAMP, etc.)
+   - All constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, NOT NULL, CHECK)
+   - Index definitions (PRIMARY indexes, INDEX, UNIQUE indexes)
+   - Foreign key constraints with ON DELETE/ON UPDATE actions
+   - Default values where appropriate
+5. The Technical Documentation tells you WHAT tables to create and WHY
+6. You provide the HOW - the detailed SQL implementation
+7. Create tables that match the design described in Technical Documentation
+8. DO NOT repeat requirements - implement the database design from Technical Documentation
 """
     
     final_prompt = f"""{DATABASE_SCHEMA_PROMPT}
@@ -1432,12 +1491,16 @@ CRITICAL INSTRUCTIONS:
 
 CRITICAL REMINDERS:
 - You are Level 3. Use Technical Documentation as your PRIMARY source
-- DO NOT repeat requirements - design SPECIFIC database schema based on Technical Documentation
-- Create ACTUAL table definitions with SQL CREATE TABLE statements
-- Include all columns with data types (VARCHAR, INT, TIMESTAMP, etc.)
-- Define PRIMARY KEYs, FOREIGN KEYs, UNIQUE constraints, NOT NULL constraints
-- Design indexes for performance based on Technical Documentation patterns
-- Create at least 5-10 core tables that support the technical architecture
+- Technical Documentation provides the DATABASE DESIGN OVERVIEW (what tables exist, what they store, how they relate)
+- Your role is to IMPLEMENT the design with DETAILED SQL (CREATE TABLE statements, indexes, constraints)
+- DO NOT repeat requirements - IMPLEMENT the database design from Technical Documentation
+- Create ACTUAL table definitions with complete SQL CREATE TABLE statements
+- Include ALL columns with exact data types (VARCHAR(255), INT, TIMESTAMP, TEXT, etc.)
+- Define PRIMARY KEYs, FOREIGN KEYs, UNIQUE constraints, NOT NULL constraints, CHECK constraints
+- Design indexes for performance based on the indexing strategy from Technical Documentation
+- Implement ALL tables mentioned in Technical Documentation (typically 5-10 core tables)
+- Add appropriate constraints, indexes, and relationships based on the design overview
+- Include database initialization scripts and migration scripts if applicable
 
 Reference Information (for context only):
 Project Overview: {requirements_summary.get('project_overview', 'N/A')}
@@ -1533,8 +1596,13 @@ Format requirements:
 Now, analyze the following project requirements and technical specifications to generate the Setup Guide:"""
 
 
-def get_setup_guide_prompt(requirements_summary: dict, technical_summary: Optional[str] = None, api_summary: Optional[str] = None) -> str:
-    """Get Setup Guide prompt - Must use Level 3 outputs"""
+def get_setup_guide_prompt(
+    requirements_summary: dict, 
+    technical_summary: Optional[str] = None, 
+    api_summary: Optional[str] = None,
+    database_schema_summary: Optional[str] = None
+) -> str:
+    """Get Setup Guide prompt - Must use Level 3 outputs including Database Schema"""
     
     # Must have Technical Documentation (Level 3)
     if not technical_summary:
@@ -1550,9 +1618,32 @@ PRIMARY SOURCE - Technical Documentation (Level 3):
 CRITICAL INSTRUCTIONS:
 Extract SPECIFIC setup information from Technical Documentation above:
 - Technology stack and EXACT versions (e.g., Python 3.11.5, Node.js 18.17.0, PostgreSQL 15.3)
-- Database setup procedures from technical spec
 - Configuration requirements from technical spec
 - Actual installation commands based on the specified tech stack
+"""
+    
+    # Add database schema information if available
+    if database_schema_summary:
+        db_summary = summarize_document(
+            database_schema_summary,
+            document_type="database schema",
+            target_agent="setup_guide",
+            focus_areas=["database setup", "table creation", "migration scripts", "database initialization", "SQL commands", "database configuration"]
+        ) if len(database_schema_summary) > 2000 else database_schema_summary
+        
+        context += f"""
+
+DATABASE SCHEMA - Detailed SQL Schemas (Level 3):
+{db_summary}
+
+DATABASE SETUP INSTRUCTIONS:
+- Extract database setup procedures from Database Schema above
+- Include SPECIFIC database installation and configuration steps
+- Provide EXACT SQL commands for creating tables (use the CREATE TABLE statements from Database Schema)
+- Include database migration scripts based on the schema
+- Provide database initialization commands
+- Include database connection configuration examples
+- Show how to run the SQL scripts to set up the database
 """
     
     if api_summary:
@@ -1577,13 +1668,14 @@ Use API documentation to provide examples of testing API endpoints during setup 
 
 CRITICAL REMINDERS:
 - You are using Level 3 outputs as PRIMARY sources
-- DO NOT repeat requirements - write SPECIFIC setup instructions from Technical Documentation
+- DO NOT repeat requirements - write SPECIFIC setup instructions from Technical Documentation and Database Schema
 - Include actual commands (extract from tech stack in Technical Documentation)
 - Provide real configuration file examples based on Technical Documentation
 - Include step-by-step procedures with copy-paste commands
+- Include SPECIFIC database setup steps using the SQL schemas from Database Schema
 - Base everything EXCLUSIVELY on the Level 3 technical specifications
 
-Generate the complete Setup Guide based on Technical Documentation:"""
+Generate the complete Setup Guide based on Level 3 outputs (Technical Documentation and Database Schema):"""
     
     return final_prompt
 

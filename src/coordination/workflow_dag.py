@@ -23,28 +23,22 @@ class Phase2Task:
 
 # Phase 2 Task DAG Configuration
 # This defines all Phase 2 tasks, their dependencies, and how to build their arguments
+# NOTE: database_schema has been moved to Phase 1 (see coordinator.py)
 PHASE2_TASKS_CONFIG: Dict[str, Phase2Task] = {
     # L3 Tech Agents
     "api_doc": Phase2Task(
         task_id="api_doc",
         agent_type=AgentType.API_DOCUMENTATION,
         output_filename="api_documentation.md",
-        dependencies=[AgentType.TECHNICAL_DOCUMENTATION],
-        kwargs_builder="simple_tech"
-    ),
-    "db_schema": Phase2Task(
-        task_id="db_schema",
-        agent_type=AgentType.DATABASE_SCHEMA,
-        output_filename="database_schema.md",
-        dependencies=[AgentType.TECHNICAL_DOCUMENTATION],
-        kwargs_builder="simple_tech"
+        dependencies=[AgentType.TECHNICAL_DOCUMENTATION, AgentType.DATABASE_SCHEMA],
+        kwargs_builder="with_db_schema"
     ),
     "setup_guide": Phase2Task(
         task_id="setup_guide",
         agent_type=AgentType.SETUP_GUIDE,
         output_filename="setup_guide.md",
-        dependencies=[AgentType.API_DOCUMENTATION, AgentType.TECHNICAL_DOCUMENTATION],
-        kwargs_builder="with_api"
+        dependencies=[AgentType.API_DOCUMENTATION, AgentType.TECHNICAL_DOCUMENTATION, AgentType.DATABASE_SCHEMA],
+        kwargs_builder="with_api_and_db"
     ),
     "dev_doc": Phase2Task(
         task_id="dev_doc",
@@ -178,6 +172,28 @@ def build_kwargs_for_task(
             "api_summary": api_summary
         }
     
+    elif task.kwargs_builder == "with_db_schema":
+        # Task that needs requirements, technical, and database schema
+        db_schema_summary = deps_content.get(AgentType.DATABASE_SCHEMA)
+        return {
+            **base_kwargs,
+            "requirements_summary": req_summary,
+            "technical_summary": technical_summary,
+            "database_schema_summary": db_schema_summary
+        }
+    
+    elif task.kwargs_builder == "with_api_and_db":
+        # Task that needs requirements, technical, API documentation, and database schema
+        api_summary = deps_content.get(AgentType.API_DOCUMENTATION)
+        db_schema_summary = deps_content.get(AgentType.DATABASE_SCHEMA)
+        return {
+            **base_kwargs,
+            "requirements_summary": req_summary,
+            "technical_summary": technical_summary,
+            "api_summary": api_summary,
+            "database_schema_summary": db_schema_summary
+        }
+    
     elif task.kwargs_builder == "with_pm":
         # Task that needs requirements and PM documentation
         pm_summary = deps_content.get(AgentType.PM_DOCUMENTATION)
@@ -240,9 +256,9 @@ def get_phase2_tasks_for_profile(profile: str = "team") -> List[Phase2Task]:
         List of Phase2Task objects
     """
     # Common tasks (both team and individual)
+    # NOTE: db_schema has been moved to Phase 1 (see coordinator.py)
     common_tasks = [
         "api_doc",
-        "db_schema",
         "setup_guide",
         "dev_doc",
         "test_doc",
@@ -283,11 +299,13 @@ def build_task_dependencies(tasks: List[Phase2Task]) -> Dict[str, List[str]]:
     
     # Also map Phase 1 agent types to their task_ids (they're not in Phase 2, but we need to track them)
     # Phase 1 tasks are already complete, so we can reference them by their AgentType
+    # NOTE: DATABASE_SCHEMA is now in Phase 1, so it's included here
     phase1_agent_types = [
         AgentType.REQUIREMENTS_ANALYST,
         AgentType.PROJECT_CHARTER,
         AgentType.USER_STORIES,
-        AgentType.TECHNICAL_DOCUMENTATION
+        AgentType.TECHNICAL_DOCUMENTATION,
+        AgentType.DATABASE_SCHEMA  # Moved to Phase 1
     ]
     
     # Build dependency map
