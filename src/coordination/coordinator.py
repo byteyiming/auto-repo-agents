@@ -72,14 +72,15 @@ class WorkflowCoordinator:
         """
         Initialize workflow coordinator
         
+        NOTE: All agents are FORCED to use Gemini (no local models).
+        The provider_name and provider_config parameters are kept for backward compatibility
+        but are IGNORED - all agents will use Gemini regardless.
+        
         Args:
             context_manager: Context manager instance
             rate_limiter: Shared rate limiter for all agents
-            provider_name: Default provider name for all agents (uses env var if None)
-                          Options: "ollama", "gemini", "openai"
-            provider_config: Dict mapping agent attribute names to provider names
-                           (overrides default provider_name for specific agents)
-                           Example: {"requirements_analyst": "gemini", "technical_agent": "ollama"}
+            provider_name: (IGNORED - kept for backward compatibility) All agents use "gemini"
+            provider_config: (IGNORED - kept for backward compatibility) All agents use "gemini"
         """
         settings = get_settings()
         self.context_manager = context_manager or ContextManager()
@@ -91,41 +92,32 @@ class WorkflowCoordinator:
         self.file_manager = FileManager(base_dir=settings.docs_dir)
         logger.info(f"WorkflowCoordinator initialized (environment: {settings.environment.value})")
         
-        # Determine default provider (from parameter or env var)
-        default_provider = provider_name or os.getenv("LLM_PROVIDER")
+        # FORCE GEMINI FOR ALL AGENTS - NO LOCAL MODELS
+        # Override any environment variables or parameters to ensure all agents use Gemini
+        default_provider = os.getenv("LLM_PROVIDER") 
         provider_config = provider_config or {}
         
-        # Hybrid Mode: Key agents use Gemini for better quality, others use default (Ollama)
-        # This ensures critical/complex documents get high quality while saving costs
-        # Only apply hybrid mode if:
-        # 1. No explicit provider_config is provided (user wants auto-config)
-        # 2. Default provider is Ollama (or None, which defaults to Ollama via env)
-        # 3. Gemini API key is available (can actually use Gemini)
+        # Verify Gemini API key is available
         gemini_api_key = os.getenv("GEMINI_API_KEY")
-        should_enable_hybrid = (
-            not provider_config and  # No explicit config
-            (default_provider is None or default_provider.lower() == "ollama") and  # Using Ollama
-            gemini_api_key and gemini_api_key != ""  # Gemini API key available
-        )
+        if not gemini_api_key or gemini_api_key == "":
+            logger.warning("⚠️  GEMINI_API_KEY not found. Please set it in .env file.")
+            logger.warning("   All agents will use Gemini, but API calls will fail without a valid key.")
+        else:
+            logger.info("✅ Gemini API key found. All agents will use Gemini.")
         
-        if should_enable_hybrid:
-            # Key agents that require high quality (complex prompts, technical accuracy)
-            # These agents handle the most complex documentation tasks
-            hybrid_config = {
-                "technical_agent": "gemini",           # Technical specs are complex
-                "api_agent": "gemini",                 # API docs need precision
-                "database_schema_agent": "gemini",     # Database design is critical
-                "requirements_analyst": "gemini",      # Requirements are foundational
-            }
-            # Merge with user-provided config (user config takes precedence)
-            provider_config = {**hybrid_config, **provider_config}
-            logger.info("🔀 Hybrid mode enabled: Key agents (technical, API, database, requirements) use Gemini, others use Ollama")
-            logger.info("   This balances quality (Gemini for complex docs) with cost (Ollama for others)")
+        # All agents use Gemini (no hybrid mode, no local models, no exceptions)
+        logger.info("🚀 FORCED: All agents using Gemini (no local models)")
+        if provider_config:
+            # Override any custom config to use Gemini
+            logger.warning(f"⚠️  Custom provider_config provided: {provider_config}")
+            logger.warning("   Overriding to Gemini for all agents (no local models)")
+            provider_config = {}  # Clear custom config, force Gemini
         
-        # Helper function to get provider for an agent
-        def get_agent_provider(agent_key: str) -> Optional[str]:
-            """Get provider for a specific agent"""
-            return provider_config.get(agent_key, default_provider)
+        # Helper function to get provider for an agent (always returns gemini)
+        def get_agent_provider(agent_key: str) -> str:
+            """Get provider for a specific agent (always returns gemini - no local models)"""
+            # Force Gemini for all agents, ignore any custom config
+            return "gemini"
         
         # Initialize agents (shared rate limiter, with optional provider override)
         self.requirements_analyst = RequirementsAnalyst(
@@ -228,20 +220,12 @@ class WorkflowCoordinator:
         )
         
         # Log provider configuration
-        if default_provider:
-            logger.info(f"WorkflowCoordinator using default provider: {default_provider}")
-        if provider_config:
-            # Log which agents use which provider
-            gemini_agents = [k for k, v in provider_config.items() if v and v.lower() == "gemini"]
-            ollama_agents = [k for k, v in provider_config.items() if v and v.lower() == "ollama"]
-            if gemini_agents:
-                logger.info(f"Agents using Gemini: {', '.join(gemini_agents)}")
-            if ollama_agents:
-                logger.info(f"Agents using Ollama: {', '.join(ollama_agents)}")
-            if len(provider_config) > len(gemini_agents) + len(ollama_agents):
-                logger.info(f"WorkflowCoordinator using custom provider config: {provider_config}")
+        logger.info("✅ WorkflowCoordinator configured: ALL agents using Gemini (no local models)")
+        logger.info("   Provider: gemini (forced, no overrides)")
+        logger.info("   Model: gemini-2.0-flash (or GEMINI_DEFAULT_MODEL if set)")
+        logger.info("   Local models: DISABLED")
         
-        logger.info("WorkflowCoordinator initialized with all agents (including business/marketing agents and auto-fix)")
+        logger.info("WorkflowCoordinator initialized with all agents (ALL using Gemini - no local models)")
     
     def _run_agent_with_quality_loop(
         self,
@@ -646,7 +630,7 @@ Improvement Suggestions:
                 agent_instance=self.requirements_analyst,
                 agent_type=AgentType.REQUIREMENTS_ANALYST,
                 generate_kwargs={"user_idea": user_idea},
-                output_filename="requirements.md",
+                output_filename="requirements/requirements.md",
                 project_id=project_id,
                 quality_threshold=80.0
             )
@@ -669,7 +653,7 @@ Improvement Suggestions:
                     agent_instance=self.project_charter_agent,
                     agent_type=AgentType.PROJECT_CHARTER,
                     generate_kwargs={"requirements_summary": req_summary},
-                    output_filename="project_charter.md",
+                    output_filename="charter/project_charter.md",
                     project_id=project_id,
                     quality_threshold=75.0
                 )
@@ -691,7 +675,7 @@ Improvement Suggestions:
                     "requirements_summary": req_summary,
                     "project_charter_summary": charter_summary_for_stories
                 },
-                output_filename="user_stories.md",
+                output_filename="user_stories/user_stories.md",
                 project_id=project_id,
                 quality_threshold=75.0
             )
@@ -718,7 +702,7 @@ Improvement Suggestions:
                     "user_stories_summary": user_stories_summary,
                     "pm_summary": pm_summary_for_tech  # None - PM doc is generated in Phase 2
                 },
-                output_filename="technical_spec.md",
+                output_filename="technical/technical_spec.md",
                 project_id=project_id,
                 quality_threshold=70.0  # Technical docs threshold can be slightly lower
             )
@@ -804,13 +788,20 @@ Improvement Suggestions:
                     if not agent:
                         raise ValueError(f"Agent not found for {task.agent_type.value}")
                     
-                    # Execute agent.generate_and_save in executor (it's sync, but we run it async)
-                    # This allows true async parallel execution of multiple agents
-                    # Capture kwargs in closure
-                    result = await loop.run_in_executor(
-                        None,
-                        lambda kw=kwargs: agent.generate_and_save(**kw)
-                    )
+                    # Execute agent.generate_and_save (async if available, otherwise sync in executor)
+                    # Check if agent has async_generate_and_save method first
+                    if hasattr(agent, 'async_generate_and_save') and asyncio.iscoroutinefunction(agent.async_generate_and_save):
+                        # Native async method (best performance)
+                        result = await agent.async_generate_and_save(**kwargs)
+                    elif hasattr(agent, 'generate_and_save') and asyncio.iscoroutinefunction(agent.generate_and_save):
+                        # Async generate_and_save method
+                        result = await agent.generate_and_save(**kwargs)
+                    else:
+                        # Fallback: run sync method in executor
+                        result = await loop.run_in_executor(
+                            None,
+                            lambda kw=kwargs: agent.generate_and_save(**kw)
+                        )
                     return result
                 
                 return execute_async_task
