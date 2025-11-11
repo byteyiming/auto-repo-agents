@@ -17,13 +17,13 @@ logger = get_logger(__name__)
 class GeminiProvider(BaseLLMProvider):
     """Google Gemini API provider"""
     
-    def __init__(self, api_key: Optional[str] = None, default_model: str = "gemini-2.0-flash-lite", **kwargs):
+    def __init__(self, api_key: Optional[str] = None, default_model: Optional[str] = None, **kwargs):
         """
         Initialize Gemini provider
         
         Args:
             api_key: Gemini API key (if None, loads from GEMINI_API_KEY env var)
-            default_model: Default model to use
+            default_model: Default model to use (if None, uses GEMINI_DEFAULT_MODEL env var or "gemini-2.0-flash")
             **kwargs: Additional Gemini-specific config
         """
         if api_key is None:
@@ -40,16 +40,41 @@ class GeminiProvider(BaseLLMProvider):
         # Configure Gemini
         genai.configure(api_key=self.api_key)
         
+        # Get default model from parameter, env var, or use recommended default
+        if default_model is None:
+            default_model = os.getenv("GEMINI_DEFAULT_MODEL", "gemini-2.0-flash")
+        
         # Store default model
         self.default_model_name = default_model
         
-        # Initialize model
-        try:
-            self._model = genai.GenerativeModel(default_model)
-        except Exception:
-            # Fallback to gemini-2.0-flash-lite if model not available
-            self.default_model_name = "gemini-2.0-flash-lite"
-            self._model = genai.GenerativeModel(self.default_model_name)
+        # Initialize model with fallback chain
+        model_priority = [
+            default_model,
+            "gemini-2.0-flash",  # Recommended: Good quality, 15 RPM, 1M TPM
+            "gemini-2.0-flash-lite",  # Fallback: Lower quality but higher rate limits
+        ]
+        
+        for model_name in model_priority:
+            try:
+                self._model = genai.GenerativeModel(model_name)
+                self.default_model_name = model_name
+                logger.info(f"✅ Gemini model initialized: {model_name}")
+                break
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to initialize {model_name}: {e}")
+                continue
+        else:
+            # Last resort: try any available model
+            try:
+                available_models = genai.list_models()
+                for model in available_models:
+                    if 'generateContent' in model.supported_generation_methods:
+                        self._model = genai.GenerativeModel(model.name)
+                        self.default_model_name = model.name
+                        logger.warning(f"⚠️  Using fallback model: {model.name}")
+                        break
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize any Gemini model: {e}")
     
     def generate(
         self,

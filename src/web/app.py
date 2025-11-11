@@ -3,20 +3,24 @@ Web Interface for DOCU-GEN
 FastAPI web application for documentation generation
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 import asyncio
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, Set
 from pathlib import Path
 import uuid
 from datetime import datetime
+import json
 
 from src.coordination.coordinator import WorkflowCoordinator
 from src.context.context_manager import ContextManager
 from src.utils.document_organizer import get_documents_summary
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # Global coordinator and context manager
@@ -24,6 +28,57 @@ coordinator: Optional[WorkflowCoordinator] = None
 context_manager: Optional[ContextManager] = None
 # Note: project_status is now stored in database via ContextManager
 # Removed in-memory dictionary for stateless web app support
+
+# WebSocket connection manager for real-time progress updates
+class WebSocketManager:
+    """Manages WebSocket connections for real-time progress updates"""
+    
+    def __init__(self):
+        # Map project_id -> Set of WebSocket connections
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+    
+    async def connect(self, websocket: WebSocket, project_id: str):
+        """Accept a WebSocket connection for a project"""
+        await websocket.accept()
+        if project_id not in self.active_connections:
+            self.active_connections[project_id] = set()
+        self.active_connections[project_id].add(websocket)
+        logger.info(f"WebSocket connected for project: {project_id} (total connections: {len(self.active_connections[project_id])})")
+    
+    def disconnect(self, websocket: WebSocket, project_id: str):
+        """Remove a WebSocket connection"""
+        if project_id in self.active_connections:
+            self.active_connections[project_id].discard(websocket)
+            if not self.active_connections[project_id]:
+                del self.active_connections[project_id]
+        logger.info(f"WebSocket disconnected for project: {project_id}")
+    
+    async def send_progress(self, project_id: str, message: dict):
+        """Send progress update to all connections for a project"""
+        if project_id not in self.active_connections:
+            return
+        
+        # Create message with timestamp
+        message_with_ts = {
+            **message,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Send to all connected clients for this project
+        disconnected = set()
+        for connection in self.active_connections[project_id]:
+            try:
+                await connection.send_json(message_with_ts)
+            except Exception as e:
+                logger.warning(f"Failed to send WebSocket message: {e}")
+                disconnected.add(connection)
+        
+        # Remove disconnected connections
+        for connection in disconnected:
+            self.disconnect(connection, project_id)
+
+# Global WebSocket manager
+websocket_manager = WebSocketManager()
 
 
 @asynccontextmanager
@@ -40,6 +95,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="DOCU-GEN API", version="1.0.0", lifespan=lifespan)
+
+# Serve static files
+static_dir = Path(__file__).parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # CORS middleware for frontend access
 app.add_middleware(
@@ -69,7 +129,29 @@ class GenerationResponse(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """Serve the main HTML page"""
+    """Serve the main HTML page with Tailwind CSS and modern UI"""
+    # Try to read template file first
+    template_path = Path(__file__).parent / "templates" / "index.html"
+    if template_path.exists():
+        return FileResponse(template_path)
+    
+    # Fallback: Return simple message directing to template setup
+    return HTMLResponse("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>DOCU-GEN - Setup Required</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <h1>DOCU-GEN</h1>
+        <p>Template file not found. Please ensure <code>src/web/templates/index.html</code> exists.</p>
+        <p>Static files should be in <code>src/web/static/</code></p>
+    </body>
+    </html>
+    """)
+    
+    # Legacy inline HTML (kept for reference, but not used if template exists)
     html_content = """
     <!DOCTYPE html>
     <html>
@@ -308,7 +390,9 @@ async def root():
             const resultsContainer = document.getElementById('resultsContainer');
             const generateBtn = document.getElementById('generateBtn');
             let projectId = null;
-            let pollInterval = null;
+            let websocket = null;
+            let reconnectAttempts = 0;
+            const maxReconnectAttempts = 5;
             
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -326,6 +410,8 @@ async def root():
                 showStatus('Starting documentation generation...', 'info');
                 progressDiv.classList.add('active');
                 resultsDiv.classList.remove('active');
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
                 
                 try {
                     const response = await fetch('/api/generate', {
@@ -337,11 +423,10 @@ async def root():
                     const data = await response.json();
                     projectId = data.project_id;
                     
-                    showStatus('Documentation generation started! Checking progress...', 'info');
+                    showStatus('Documentation generation started! Connecting for real-time updates...', 'info');
                     
-                    // Start polling for status
-                    pollInterval = setInterval(checkStatus, 2000);
-                    checkStatus();
+                    // Connect to WebSocket for real-time updates
+                    connectWebSocket(projectId);
                 } catch (error) {
                     showStatus('Error: ' + error.message, 'error');
                     generateBtn.disabled = false;
@@ -350,7 +435,145 @@ async def root():
                 }
             });
             
-            async function checkStatus() {
+            function connectWebSocket(projectId) {
+                // Close existing connection if any
+                if (websocket) {
+                    websocket.close();
+                }
+                
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/${projectId}`;
+                
+                websocket = new WebSocket(wsUrl);
+                reconnectAttempts = 0;
+                
+                websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    showStatus('Connected! Receiving real-time updates...', 'info');
+                };
+                
+                websocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleWebSocketMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+                
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    showStatus('Connection error. Falling back to status polling...', 'error');
+                    // Fallback to polling if WebSocket fails
+                    fallbackToPolling(projectId);
+                };
+                
+                websocket.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    // Try to reconnect if generation is still in progress
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        setTimeout(() => {
+                            console.log(`Reconnecting WebSocket (attempt ${reconnectAttempts})...`);
+                            connectWebSocket(projectId);
+                        }, 1000 * reconnectAttempts);
+                    } else {
+                        showStatus('Connection lost. Falling back to status polling...', 'error');
+                        fallbackToPolling(projectId);
+                    }
+                };
+            }
+            
+            function handleWebSocketMessage(message) {
+                console.log('WebSocket message:', message);
+                
+                switch (message.type) {
+                    case 'connected':
+                        showStatus('Connected! Waiting for updates...', 'info');
+                        break;
+                    
+                    case 'start':
+                        showStatus('Documentation generation started!', 'info');
+                        progressBar.style.width = '5%';
+                        progressBar.textContent = '5%';
+                        break;
+                    
+                    case 'phase':
+                        showStatus(message.message || `Phase: ${message.phase}`, 'info');
+                        // Update progress based on phase
+                        if (message.phase === 'phase_1') {
+                            progressBar.style.width = '25%';
+                            progressBar.textContent = '25%';
+                        } else if (message.phase === 'phase_2') {
+                            progressBar.style.width = '60%';
+                            progressBar.textContent = '60%';
+                        } else if (message.phase === 'phase_3') {
+                            progressBar.style.width = '85%';
+                            progressBar.textContent = '85%';
+                        }
+                        break;
+                    
+                    case 'progress':
+                        // Update progress bar
+                        const percent = message.progress || 0;
+                        progressBar.style.width = percent + '%';
+                        progressBar.textContent = percent + '%';
+                        if (message.message) {
+                            showStatus(message.message, 'info');
+                        }
+                        break;
+                    
+                    case 'complete':
+                        progressBar.style.width = '100%';
+                        progressBar.textContent = '100%';
+                        showStatus('Documentation generation complete!', 'success');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = 'Generate Documentation';
+                        progressDiv.classList.remove('active');
+                        
+                        // Close WebSocket connection
+                        if (websocket) {
+                            websocket.close();
+                            websocket = null;
+                        }
+                        
+                        // Fetch and display results
+                        fetchResults();
+                        break;
+                    
+                    case 'error':
+                        showStatus('Error: ' + (message.message || 'Unknown error'), 'error');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = 'Generate Documentation';
+                        progressDiv.classList.remove('active');
+                        
+                        // Close WebSocket connection
+                        if (websocket) {
+                            websocket.close();
+                            websocket = null;
+                        }
+                        break;
+                    
+                    case 'heartbeat':
+                        // Just keep connection alive, no UI update needed
+                        break;
+                    
+                    default:
+                        console.log('Unknown message type:', message.type);
+                }
+            }
+            
+            // Fallback to polling if WebSocket is not available
+            let pollInterval = null;
+            function fallbackToPolling(projectId) {
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                }
+                pollInterval = setInterval(() => checkStatus(projectId), 2000);
+                checkStatus(projectId);
+            }
+            
+            async function checkStatus(projectId) {
                 if (!projectId) return;
                 
                 try {
@@ -365,7 +588,10 @@ async def root():
                     progressBar.textContent = progressPercent + '%';
                     
                     if (data.status === 'complete') {
-                        clearInterval(pollInterval);
+                        if (pollInterval) {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                        }
                         showStatus('Documentation generation complete!', 'success');
                         generateBtn.disabled = false;
                         generateBtn.textContent = 'Generate Documentation';
@@ -374,7 +600,10 @@ async def root():
                         // Fetch and display results
                         await fetchResults();
                     } else if (data.status === 'failed') {
-                        clearInterval(pollInterval);
+                        if (pollInterval) {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                        }
                         showStatus('Documentation generation failed', 'error');
                         generateBtn.disabled = false;
                         generateBtn.textContent = 'Generate Documentation';
@@ -633,7 +862,11 @@ async def get_status(project_id: str):
 
 @app.get("/api/results/{project_id}")
 async def get_results(project_id: str):
-    """Get generation results with documents organized by level from database"""
+    """Get generation results with documents organized by level from database
+    
+    Returns documents organized by level (L1: Strategic, L2: Product, L3: Technical, Cross-Level)
+    with metadata including file paths, display names, file sizes, and generation timestamps.
+    """
     status = context_manager.get_project_status(project_id)
     
     if not status:
@@ -643,12 +876,124 @@ async def get_results(project_id: str):
         raise HTTPException(status_code=400, detail="Generation not complete")
     
     results = status.get("results", {})
+    files = results.get("files", {})
     
-    # Ensure documents_by_level is included
-    if "documents_by_level" not in results and "files" in results:
-        results["documents_by_level"] = get_documents_summary(results["files"])
+    # Get documents organized by level
+    if "documents_by_level" not in results and files:
+        results["documents_by_level"] = get_documents_summary(files)
+    
+    # Enhance documents with metadata (file size, modification time, etc.)
+    if "documents_by_level" in results:
+        from src.utils.file_manager import FileManager
+        file_manager = FileManager()
+        
+        # Add metadata to each document
+        for level_key in ["level_1_strategic", "level_2_product", "level_3_technical", "cross_level"]:
+            if level_key in results["documents_by_level"]:
+                documents = results["documents_by_level"][level_key].get("documents", [])
+                for doc in documents:
+                    file_path = doc.get("file_path")
+                    if file_path and Path(file_path).exists():
+                        try:
+                            # Get file size
+                            file_size = Path(file_path).stat().st_size
+                            doc["file_size"] = file_size
+                            doc["file_size_human"] = _format_file_size(file_size)
+                            
+                            # Get modification time
+                            mtime = Path(file_path).stat().st_mtime
+                            doc["modified_at"] = datetime.fromtimestamp(mtime).isoformat()
+                            
+                            # Get file extension
+                            doc["file_extension"] = Path(file_path).suffix.lower()
+                        except Exception as e:
+                            logger.warning(f"Could not get metadata for {file_path}: {e}")
+    
+    # Add summary statistics
+    results["summary"] = {
+        "total_documents": len(files),
+        "total_size": sum(
+            Path(path).stat().st_size 
+            for path in files.values() 
+            if Path(path).exists()
+        ) if files else 0,
+        "generated_at": status.get("updated_at"),
+        "profile": status.get("profile", "team")
+    }
     
     return results
+
+
+def _format_file_size(size_bytes: int) -> str:
+    """Format file size in human-readable format"""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} TB"
+
+
+@app.websocket("/ws/{project_id}")
+async def websocket_endpoint(websocket: WebSocket, project_id: str):
+    """WebSocket endpoint for real-time progress updates"""
+    await websocket_manager.connect(websocket, project_id)
+    try:
+        # Send initial connection confirmation
+        await websocket.send_json({
+            "type": "connected",
+            "message": "WebSocket connected",
+            "project_id": project_id,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Keep connection alive and listen for messages
+        while True:
+            # Wait for messages from client (optional, for bidirectional communication)
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                # Echo back or handle client messages if needed
+                # For now, we just keep the connection alive
+            except asyncio.TimeoutError:
+                # Send heartbeat to keep connection alive
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now().isoformat()
+                })
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(websocket, project_id)
+    except Exception as e:
+        logger.error(f"WebSocket error for project {project_id}: {e}", exc_info=True)
+        websocket_manager.disconnect(websocket, project_id)
+
+
+@app.get("/api/preview/{project_id}/{doc_type}")
+async def preview_document(project_id: str, doc_type: str):
+    """Preview a generated document (returns markdown content)"""
+    status = context_manager.get_project_status(project_id)
+    
+    if not status:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    if status["status"] != "complete":
+        raise HTTPException(status_code=400, detail="Generation not complete")
+    
+    results = status.get("results", {})
+    files = results.get("files", {})
+    
+    if doc_type not in files:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    file_path = Path(files[doc_type])
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Read file content
+    try:
+        content = file_path.read_text(encoding='utf-8')
+        return Response(content=content, media_type='text/markdown')
+    except Exception as e:
+        logger.error(f"Error reading file {file_path}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 
 
 @app.get("/api/download/{project_id}/{doc_type}")
