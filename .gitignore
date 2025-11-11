@@ -55,9 +55,10 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Markdown files in root (except README)
+# Markdown files in root (except README and workflow docs)
 *.md
 !README.md
+!WORKFLOW_DOCUMENTATION.md
 
 
 # Documentation files (organized in docs/)
