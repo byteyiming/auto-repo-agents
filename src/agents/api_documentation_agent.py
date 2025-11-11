@@ -120,7 +120,7 @@ class APIDocumentationAgent(BaseAgent):
             output_filename: Filename to save
             project_id: Project ID for context sharing
             context_manager: Context manager for saving
-        
+            
         Returns:
             Absolute path to saved file
         """
@@ -167,7 +167,7 @@ class APIDocumentationAgent(BaseAgent):
             output_filename: Filename to save
             project_id: Project ID for context sharing
             context_manager: Context manager for saving
-        
+            
         Returns:
             Absolute path to saved file
         """
@@ -192,10 +192,10 @@ class APIDocumentationAgent(BaseAgent):
                 status=DocumentStatus.COMPLETE,
                 generated_at=datetime.now()
             )
-            await loop.run_in_executor(
-                None,
-                lambda: context_manager.save_agent_output(project_id, output)
-            )
+        await loop.run_in_executor(
+            None,
+            lambda: context_manager.save_agent_output(project_id, output)
+        )
         
         return file_path
 

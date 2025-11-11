@@ -278,6 +278,13 @@ document_file_paths = {}  # Store file paths
    - Output: `technical_spec.md`
    - Quality Loop: Generate → Check → Improve (if score < 70.0)
 
+5. **Database Schema** (threshold: 70.0)
+   - Agent: `DatabaseSchemaAgent`
+   - Input: `requirements_summary`, `technical_summary`
+   - Output: `database_schema.md`
+   - Quality Loop: Generate → Check → Improve (if score < 70.0)
+   - **Note**: Moved from Phase 2 to Phase 1 to ensure API Documentation and Setup Guide can use the database schema
+
 **Quality Loop Details** (`_run_agent_with_quality_loop`):
 
 ```python
@@ -335,7 +342,6 @@ def _run_agent_with_quality_loop(
 
 **Team Profile** (all documents):
 - API Documentation
-- Database Schema
 - Setup Guide
 - Developer Documentation
 - Test Documentation
@@ -349,13 +355,14 @@ def _run_agent_with_quality_loop(
 
 **Individual Profile** (core documents only):
 - API Documentation
-- Database Schema
 - Setup Guide
 - Developer Documentation
 - Test Documentation
 - User Documentation
 - Legal Compliance
 - Support Playbook
+
+**Note**: `Database Schema` has been moved to Phase 1 (see above) to ensure API Documentation and Setup Guide can access the database schema information.
 
 **DAG Structure** (`workflow_dag.py`):
 
@@ -364,24 +371,20 @@ PHASE2_TASKS_CONFIG = {
     "api_doc": Phase2Task(
         task_id="api_doc",
         agent_type=AgentType.API_DOCUMENTATION,
-        dependencies=[AgentType.TECHNICAL_DOCUMENTATION],  # Depends on Phase 1
-        kwargs_builder="simple_tech"
-    ),
-    "db_schema": Phase2Task(
-        task_id="db_schema",
-        agent_type=AgentType.DATABASE_SCHEMA,
-        dependencies=[AgentType.TECHNICAL_DOCUMENTATION],  # Depends on Phase 1
-        kwargs_builder="simple_tech"
+        dependencies=[AgentType.TECHNICAL_DOCUMENTATION, AgentType.DATABASE_SCHEMA],  # Depends on Phase 1
+        kwargs_builder="with_db_schema"
     ),
     "setup_guide": Phase2Task(
         task_id="setup_guide",
         agent_type=AgentType.SETUP_GUIDE,
-        dependencies=[AgentType.API_DOCUMENTATION, AgentType.TECHNICAL_DOCUMENTATION],  # Depends on Phase 2
-        kwargs_builder="with_api"
+        dependencies=[AgentType.API_DOCUMENTATION, AgentType.TECHNICAL_DOCUMENTATION, AgentType.DATABASE_SCHEMA],  # Depends on Phase 1 and Phase 2
+        kwargs_builder="with_api_and_db"
     ),
     # ... more tasks
 }
 ```
+
+**Note**: `Database Schema` is no longer in Phase 2. It has been moved to Phase 1 to ensure proper dependency resolution. API Documentation and Setup Guide now depend on Database Schema from Phase 1.
 
 **Parallel Execution** (`AsyncParallelExecutor`):
 
@@ -463,11 +466,16 @@ parallel_results = asyncio.run(executor.execute())
 
 ```python
 # Each agent is initialized with:
-- provider_name="gemini"  # Hardcoded, always Gemini
+- provider_name=<from LLM_PROVIDER env var or provider_config>  # Configurable (Gemini, Ollama, or OpenAI)
 - rate_limiter=shared_rate_limiter  # Shared across all agents
-- model_name=None  # Uses default from GeminiProvider (gemini-2.0-flash)
-- temperature=None  # Uses default from settings (0.7 for Gemini)
+- model_name=None  # Uses default from provider (e.g., gemini-2.0-flash for Gemini)
+- temperature=None  # Uses default from settings (e.g., 0.7 for Gemini)
 ```
+
+**Provider Configuration**:
+- Default provider is determined from `LLM_PROVIDER` environment variable or `provider_config` parameter
+- Per-agent provider overrides are supported via `provider_config` dictionary
+- Supports multiple providers: Gemini, Ollama (local models), and OpenAI
 
 **Agent List:**
 1. RequirementsAnalyst
@@ -492,23 +500,36 @@ parallel_results = asyncio.run(executor.execute())
 20. ClaudeCLIDocumentationAgent
 21. CodeAnalystAgent
 
-### 2. LLM Provider (Gemini)
+### 2. LLM Provider (Configurable)
 
-**All agents use Gemini** (hardcoded in Coordinator)
+**Agents use the provider specified by configuration** (no longer hardcoded to Gemini)
 
-**Provider**: `GeminiProvider`
-- **Model**: `gemini-2.0-flash` (default, or `GEMINI_DEFAULT_MODEL` env var)
-- **API**: Google Generative AI API
-- **Rate Limiting**: Built-in rate limiting (50 requests/minute, configurable)
-- **Retry Logic**: Exponential backoff for rate limits and errors
-- **Timeout**: Dynamic timeout based on `max_tokens`
+**Supported Providers**:
+- **Gemini** (`GeminiProvider`): Google Generative AI API
+  - **Model**: `gemini-2.0-flash` (default, or `GEMINI_DEFAULT_MODEL` env var)
+  - **Rate Limiting**: Built-in rate limiting (50 requests/minute, configurable)
+  - **Retry Logic**: Exponential backoff for rate limits and errors
+  - **Timeout**: Dynamic timeout based on `max_tokens`
+- **Ollama** (`OllamaProvider`): Local models via Ollama API
+  - **Model**: Configurable via `OLLAMA_MODEL` env var (e.g., `dolphin-mixtral:8x7b`)
+  - **Base URL**: Configurable via `OLLAMA_BASE_URL` env var (default: `http://localhost:11434`)
+  - **Benefits**: Fast local development, no API costs, privacy
+- **OpenAI** (`OpenAIProvider`): OpenAI API
+  - **Model**: Configurable via `OPENAI_MODEL` env var (e.g., `gpt-4`, `gpt-3.5-turbo`)
+  - **API Key**: Required via `OPENAI_API_KEY` env var
+  - **Benefits**: High-quality outputs, enterprise support
+
+**Provider Selection**:
+- Default provider: `LLM_PROVIDER` environment variable (e.g., `gemini`, `ollama`, `openai`)
+- Per-agent overrides: `provider_config` parameter in `WorkflowCoordinator.__init__()`
+- Example: Use `gemini-2.5-pro` for Phase 1 (quality gates), `gemini-2.0-flash` for Phase 2 (speed)
 
 **API Call Flow**:
 ```python
 # BaseAgent._call_llm()
 1. Prepare prompt (with system prompt and user input)
 2. Apply rate limiting (RequestQueue)
-3. Call GeminiProvider.generate()
+3. Call Provider.generate() (GeminiProvider, OllamaProvider, or OpenAIProvider)
 4. Handle rate limits (retry with exponential backoff)
 5. Clean response (remove markdown code blocks if present)
 6. Return cleaned text
@@ -762,8 +783,10 @@ Attempt 4: Wait 8.0 seconds (if max_retries > 3)
 6. Frontend connects to WebSocket for real-time updates
 
 ### Document Generation
-1. **Phase 1**: Foundational documents with quality gates (sequential)
+1. **Phase 1**: Foundational documents with quality gates (DAG-based, parallel execution with dependencies)
+   - Requirements, Project Charter (team only), User Stories, Technical Documentation, Database Schema
 2. **Phase 2**: Secondary documents in parallel (DAG-based, async)
+   - API Documentation, Setup Guide, Developer Documentation, Test Documentation, User Documentation, Legal Compliance, Support Playbook, PM Documentation (team only), Stakeholder Communication (team only), Business Model (team only), Marketing Plan (team only)
 3. **Phase 3**: Final packaging (cross-ref, review, convert)
 4. **Phase 4**: Code analysis (optional, if codebase_path provided)
 
@@ -809,7 +832,7 @@ Attempt 4: Wait 8.0 seconds (if max_retries > 3)
 
 ## 📝 Notes
 
-- **All agents use Gemini**: Hardcoded in Coordinator, cannot be changed via env vars
+- **LLM Provider Configuration**: Agents use the provider specified by `LLM_PROVIDER` environment variable or `provider_config` parameter. Supports Gemini, Ollama, and OpenAI. Per-agent provider overrides are supported via `provider_config`.
 - **Quality Gates**: Phase 1 documents use iterative quality loops
 - **Parallel Execution**: Phase 2 documents use DAG-based parallel execution
 - **Async Support**: Phase 2 agents have native async support

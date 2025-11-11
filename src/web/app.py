@@ -5,7 +5,7 @@ FastAPI web application for documentation generation
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 import asyncio
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,7 +13,6 @@ from typing import Optional, Dict, Set
 from pathlib import Path
 import uuid
 from datetime import datetime
-import json
 
 from src.coordination.coordinator import WorkflowCoordinator
 from src.context.context_manager import ContextManager
