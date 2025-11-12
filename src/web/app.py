@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, Dict, Set
+from typing import Optional, Dict, Set, List
 from pathlib import Path
 import uuid
 from datetime import datetime
@@ -116,6 +116,14 @@ class GenerationRequest(BaseModel):
     provider_name: Optional[str] = None  # LLM provider: "ollama", "gemini", "openai" (uses env var if None)
     codebase_path: Optional[str] = None  # Optional path to codebase for code analysis
     workflow_mode: Optional[str] = "docs_first"  # "docs_first" or "code_first" - workflow mode
+    phase1_only: Optional[bool] = False  # If True, only execute Phase 1 and skip Phase 2+
+    phases_to_run: Optional[List[int]] = None  # List of phase numbers to execute (e.g., [2, 3] for Phase 2 and 3 only)
+                                                # If None, runs all phases (2-4). Only applies if phase1_only=False.
+                                                # Available phases:
+                                                # - 2: Technical Foundation (technical_doc, database_schema)
+                                                # - 3: API and Development (api_doc, setup_guide, dev_doc, test_doc)
+                                                # - 4: User/Support and PM (user_doc, legal_doc, support_playbook, pm_doc, stakeholder_doc)
+                                                # Note: business_model and marketing_plan are now in Phase 1 for quick decision-making
 
 
 class GenerationResponse(BaseModel):
@@ -482,6 +490,22 @@ async def root():
                 };
             }
             
+            // Track completed documents for real-time display
+            let completedDocuments = new Set();
+            let documentStatusDiv = null;
+            let documentList = null;
+            
+            function initDocumentStatus() {
+                if (!documentStatusDiv) {
+                    documentStatusDiv = document.createElement('div');
+                    documentStatusDiv.id = 'documentStatus';
+                    documentStatusDiv.style.cssText = 'margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; max-height: 300px; overflow-y: auto; display: none;';
+                    documentStatusDiv.innerHTML = '<h3 style="margin: 0 0 10px 0; color: #667eea; font-size: 1.1em;">📄 Document Progress</h3><ul id="documentList" style="list-style: none; margin: 0; padding: 0;"></ul>';
+                    document.querySelector('.container').appendChild(documentStatusDiv);
+                    documentList = document.getElementById('documentList');
+                }
+            }
+            
             function handleWebSocketMessage(message) {
                 console.log('WebSocket message:', message);
                 
@@ -494,6 +518,70 @@ async def root():
                         showStatus('Documentation generation started!', 'info');
                         progressBar.style.width = '5%';
                         progressBar.textContent = '5%';
+                        // Initialize and reset document tracking
+                        initDocumentStatus();
+                        completedDocuments.clear();
+                        if (documentList) {
+                            documentList.innerHTML = '';
+                        }
+                        if (documentStatusDiv) {
+                            documentStatusDiv.style.display = 'block';
+                        }
+                        break;
+                    
+                    case 'document_complete':
+                        // Real-time document completion update
+                        initDocumentStatus(); // Ensure UI is initialized
+                        const docName = message.document || 'Unknown';
+                        const docStatus = message.status || 'complete';
+                        const docPhase = message.phase || '';
+                        
+                        if (!completedDocuments.has(docName) && documentList) {
+                            completedDocuments.add(docName);
+                            
+                            // Add document to the list
+                            const listItem = document.createElement('li');
+                            listItem.style.cssText = 'padding: 10px; margin-bottom: 8px; background: white; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+                            
+                            const docInfo = document.createElement('div');
+                            docInfo.style.cssText = 'flex: 1;';
+                            
+                            const docNameSpan = document.createElement('span');
+                            docNameSpan.style.cssText = 'font-weight: 600; color: #333;';
+                            docNameSpan.textContent = docName;
+                            
+                            const phaseSpan = document.createElement('span');
+                            phaseSpan.style.cssText = 'font-size: 0.85em; color: #666; margin-left: 10px;';
+                            phaseSpan.textContent = `(${docPhase === 'phase_1' ? 'Phase 1' : 'Phase 2'})`;
+                            
+                            docInfo.appendChild(docNameSpan);
+                            docInfo.appendChild(phaseSpan);
+                            
+                            const statusIcon = document.createElement('span');
+                            statusIcon.style.cssText = 'font-size: 1.2em; margin-right: 10px;';
+                            if (docStatus === 'complete') {
+                                statusIcon.textContent = '✅';
+                                statusIcon.style.color = '#4caf50';
+                            } else {
+                                statusIcon.textContent = '❌';
+                                statusIcon.style.color = '#f44336';
+                            }
+                            
+                            listItem.appendChild(statusIcon);
+                            listItem.appendChild(docInfo);
+                            
+                            // Insert at the beginning to show newest first
+                            documentList.insertBefore(listItem, documentList.firstChild);
+                            
+                            // Update status message
+                            showStatus(message.message || `${docName} completed`, 'info');
+                            
+                            // Update progress bar (rough estimate based on completed documents)
+                            const totalDocs = 15; // Approximate total
+                            const progressPercent = Math.min(95, Math.round((completedDocuments.size / totalDocs) * 100));
+                            progressBar.style.width = progressPercent + '%';
+                            progressBar.textContent = progressPercent + '%';
+                        }
                         break;
                     
                     case 'phase':
@@ -733,7 +821,9 @@ async def generate_docs(request: GenerationRequest):
                 request.profile or "team",
                 request.provider_name,
                 request.codebase_path,
-                request.workflow_mode or "docs_first"
+                request.workflow_mode or "docs_first",
+                request.phase1_only or False,
+                request.phases_to_run
             )
         )
         
@@ -752,7 +842,9 @@ async def run_generation_async(
     profile: str = "team",
     provider_name: Optional[str] = None,
     codebase_path: Optional[str] = None,
-    workflow_mode: str = "docs_first"
+    workflow_mode: str = "docs_first",
+    phase1_only: bool = False,
+    phases_to_run: Optional[List[int]] = None
 ):
     """Run documentation generation asynchronously and update status in database"""
     local_context_manager = context_manager if context_manager else ContextManager()
@@ -783,6 +875,20 @@ async def run_generation_async(
             else:
                 local_coordinator = WorkflowCoordinator(context_manager=local_context_manager)
         
+        # Create progress callback for real-time WebSocket updates
+        async def progress_callback(phase: str, doc_name: str, status: str):
+            """Send progress update via WebSocket when each document completes"""
+            try:
+                await websocket_manager.send_progress(project_id, {
+                    "type": "document_complete",
+                    "phase": phase,
+                    "document": doc_name,
+                    "status": status,
+                    "message": f"✅ {doc_name} completed" if status == "complete" else f"❌ {doc_name} failed"
+                })
+            except Exception as e:
+                logger.warning(f"Failed to send progress update via WebSocket: {e}")
+        
         # Use async version if available, otherwise run sync in executor
         if hasattr(local_coordinator, 'async_generate_all_docs'):
             logger.info("   Using async_generate_all_docs method")
@@ -791,7 +897,10 @@ async def run_generation_async(
                 project_id=project_id,
                 profile=profile,
                 codebase_path=codebase_path,
-                workflow_mode=workflow_mode
+                workflow_mode=workflow_mode,
+                progress_callback=progress_callback,
+                phase1_only=phase1_only,
+                phases_to_run=phases_to_run
             )
         else:
             # Fallback: run sync version in executor
