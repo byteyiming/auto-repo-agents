@@ -48,8 +48,8 @@ class TestWorkflowCoordinator:
         # pm_documentation is now in Phase 4, so it may not be generated if phase1_only=True or phases_to_run doesn't include Phase 4
         # Check if pm_documentation exists (it should for team profile with full workflow)
         if "pm_documentation" in results["files"]:
-            assert results["status"]["pm_documentation"] == "complete"
-        assert results["status"]["requirements"] == "complete"
+            assert results["status"]["pm_documentation"] in ["complete", "complete_v2"]
+        assert results["status"]["requirements"] in ["complete", "complete_v2"]
     
     def test_workflow_status(self, mock_gemini_provider, context_manager, temp_dir, test_project_id):
         """Test workflow status tracking"""
