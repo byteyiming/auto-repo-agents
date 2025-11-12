@@ -7,7 +7,7 @@ import sys
 
 # 设置环境变量
 os.environ['LLM_PROVIDER'] = 'ollama'
-os.environ['OLLAMA_DEFAULT_MODEL'] = 'mistral'  # 使用你已安装的模型
+os.environ['OLLAMA_DEFAULT_MODEL'] = 'mixtral'  # 使用你已安装的模型（dolphin3 或 mixtral）
 os.environ['OLLAMA_MAX_TOKENS'] = '8192'
 
 try:
