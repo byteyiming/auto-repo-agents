@@ -487,6 +487,8 @@ def get_agent_for_phase1_task(coordinator: Any, agent_type: AgentType):
         AgentType.REQUIREMENTS_ANALYST: coordinator.requirements_analyst,
         AgentType.PROJECT_CHARTER: coordinator.project_charter_agent,
         AgentType.USER_STORIES: coordinator.user_stories_agent,
+        AgentType.BUSINESS_MODEL: coordinator.business_model_agent,
+        AgentType.MARKETING_PLAN: coordinator.marketing_plan_agent,
     }
     return agent_map.get(agent_type)
 

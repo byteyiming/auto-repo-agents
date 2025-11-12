@@ -179,24 +179,24 @@ class DocumentImproverAgent(BaseAgent):
             
             structured_context += "**CRITICAL:** Address ALL items in the structured feedback above. Focus on the priority improvements first.\n"
         
-        prompt = f"""You are a Documentation Improvement Specialist. Your task is to significantly improve a document based on quality review feedback and quality metrics.
+        prompt = f"""You are a Documentation Improvement Specialist. Your task is to improve a document by ADDING information based on quality review feedback, while preserving the existing content and structure.
 
 CRITICAL INSTRUCTIONS:
-1. Read the original document carefully and identify all issues
+1. Read the original document carefully and preserve ALL existing content
 2. Review the quality feedback and improvement suggestions
-3. Analyze the quality metrics to understand what needs improvement
-4. Generate a SIGNIFICANTLY IMPROVED version that addresses ALL issues
+3. Analyze the quality metrics to understand what needs to be added
+4. ADD new information to address the issues, while keeping the original structure
 5. The improved document MUST:
-   - Include ALL required sections (if any are missing, add them with substantial content)
-   - Meet or exceed minimum word count requirements (expand content significantly)
-   - Improve readability (use clearer language, simpler sentences)
-   - Address all specific issues mentioned in the feedback
-   - Be complete and comprehensive (no truncated sections)
-   - Maintain professional quality and consistency
-6. Focus on SUBSTANTIVE improvements, not just minor edits
-7. If sections are missing, create them with detailed, high-quality content
-8. If word count is low, expand all sections with more detail, examples, and explanations
-9. If readability is poor, rewrite for clarity while maintaining technical accuracy
+   - PRESERVE all existing sections and content (do not remove or rewrite)
+   - ADD missing sections with substantial, high-quality content
+   - EXPAND existing sections by adding more detail, examples, and explanations
+   - IMPROVE readability by adding clarifications (but keep original text)
+   - ADDRESS all specific issues mentioned in the feedback by adding content
+   - MAINTAIN the original document structure and formatting
+6. Focus on ADDITIVE improvements - add information, don't rewrite
+7. If sections are missing, ADD them with detailed, high-quality content
+8. If word count is low, EXPAND existing sections by adding more detail, examples, and explanations
+9. If readability needs improvement, ADD clarifications and examples without changing existing text
 {focus_text}
 {score_context}
 {structured_context}
@@ -211,18 +211,26 @@ CRITICAL INSTRUCTIONS:
 
 === YOUR TASK ===
 
-Generate a COMPLETE, SIGNIFICANTLY IMPROVED version of the document that:
-1. Addresses ALL issues mentioned in the quality feedback
-2. Meets ALL quality metric requirements (word count, sections, readability)
-3. Includes ALL missing sections with substantial, high-quality content
-4. Expands existing sections with more detail, examples, and explanations
-5. Improves clarity and readability throughout
-6. Maintains professional quality and technical accuracy
-7. Is comprehensive and complete (no truncated sections)
+Generate an IMPROVED version of the document by ADDING information that:
+1. PRESERVES all existing content and structure
+2. ADDS missing sections with substantial, high-quality content
+3. EXPANDS existing sections with more detail, examples, and explanations
+4. ADDS clarifications and improvements without removing original text
+5. ADDRESSES all issues mentioned in the quality feedback by adding content
+6. MAINTAINS professional quality and consistency
+7. MEETS all quality metric requirements (word count, sections, readability)
 
-IMPORTANT: This is a COMPLETE REWRITE focused on quality improvement. Do not just make minor edits - make substantial improvements to address all quality issues.
+IMPORTANT: This is an ADDITIVE improvement. Keep ALL original content and structure. Only ADD:
+- Missing sections (add them in appropriate locations)
+- More detail to existing sections (expand with examples, explanations)
+- Clarifications and improvements (add without removing original text)
 
-Start directly with the improved document content (no preamble):"""
+DO NOT:
+- Remove or rewrite existing content
+- Change the document structure significantly
+- Delete any existing sections or paragraphs
+
+Start directly with the improved document content (preserving original structure):"""
         
         try:
             logger.debug(f"Improving {document_type} document (original: {len(original_document)} chars)")
