@@ -25,16 +25,18 @@ class Phase1Task:
 
 @dataclass
 class Phase2Task:
-    """Configuration for a Phase 2 workflow task"""
+    """Configuration for a Phase 2+ workflow task (Phase 2, 3, 4, 5)"""
     task_id: str
     agent_type: AgentType
     output_filename: str
-    # Dependencies: List of AgentTypes this task depends on (from Phase 1 or Phase 2)
+    # Dependencies: List of AgentTypes this task depends on (from Phase 1 or previous phases)
     dependencies: List[AgentType]
     # Function to build kwargs for agent.generate_and_save
     # Args: (coordinator, req_summary, technical_summary, charter_content, project_id, context_manager, deps_content_dict)
     # Returns: dict of kwargs for agent.generate_and_save
     kwargs_builder: Optional[str] = None  # "simple", "with_api", "with_pm", "with_business", "with_user_doc", "custom"
+    # Phase number: 2, 3, 4, or 5 - determines which phase this task belongs to
+    phase_number: int = 2  # Default to Phase 2 for backward compatibility
 
 
 # Phase 1 Task DAG Configuration
@@ -67,109 +69,127 @@ PHASE1_TASKS_CONFIG: Dict[str, Phase1Task] = {
         quality_threshold=75.0,
         team_only=False
     ),
-    "technical_doc": Phase1Task(
+    # Business decision documents (moved to Phase 1 for quick decision-making)
+    "business_model": Phase1Task(
+        task_id="business_model",
+        agent_type=AgentType.BUSINESS_MODEL,
+        output_filename="business_model.md",
+        dependencies=[AgentType.PROJECT_CHARTER],  # Depends on project_charter (team-only, may be None for individual)
+        kwargs_builder="with_charter",
+        quality_threshold=75.0,
+        team_only=True  # Team only
+    ),
+    "marketing_plan": Phase1Task(
+        task_id="marketing_plan",
+        agent_type=AgentType.MARKETING_PLAN,
+        output_filename="marketing_plan.md",
+        dependencies=[AgentType.BUSINESS_MODEL, AgentType.PROJECT_CHARTER],
+        kwargs_builder="with_business",
+        quality_threshold=75.0,
+        team_only=True  # Team only
+    ),
+}
+
+
+# Phase 2+ Task DAG Configuration
+# This defines all Phase 2, 3, 4, 5 tasks, their dependencies, and how to build their arguments
+# Tasks are organized by phase number for sequential execution
+PHASE2_TASKS_CONFIG: Dict[str, Phase2Task] = {
+    # ========== PHASE 2: Technical Foundation Documents ==========
+    # These are the core technical documents that other phases depend on
+    "technical_doc": Phase2Task(
         task_id="technical_doc",
         agent_type=AgentType.TECHNICAL_DOCUMENTATION,
         output_filename="technical_spec.md",
         dependencies=[AgentType.REQUIREMENTS_ANALYST, AgentType.USER_STORIES],
         kwargs_builder="with_user_stories",
-        quality_threshold=70.0,
-        team_only=False
+        phase_number=2
     ),
-    "database_schema": Phase1Task(
+    "database_schema": Phase2Task(
         task_id="database_schema",
         agent_type=AgentType.DATABASE_SCHEMA,
         output_filename="database_schema.md",
         dependencies=[AgentType.REQUIREMENTS_ANALYST, AgentType.TECHNICAL_DOCUMENTATION],
         kwargs_builder="with_technical",
-        quality_threshold=70.0,
-        team_only=False
+        phase_number=2
     ),
-}
-
-
-# Phase 2 Task DAG Configuration
-# This defines all Phase 2 tasks, their dependencies, and how to build their arguments
-# NOTE: database_schema has been moved to Phase 1 (see coordinator.py)
-PHASE2_TASKS_CONFIG: Dict[str, Phase2Task] = {
-    # L3 Tech Agents
+    # ========== PHASE 3: API and Development Documents ==========
+    # These documents depend on Phase 2 technical documents
     "api_doc": Phase2Task(
         task_id="api_doc",
         agent_type=AgentType.API_DOCUMENTATION,
         output_filename="api_documentation.md",
         dependencies=[AgentType.TECHNICAL_DOCUMENTATION, AgentType.DATABASE_SCHEMA],
-        kwargs_builder="with_db_schema"
+        kwargs_builder="with_db_schema",
+        phase_number=3
     ),
     "setup_guide": Phase2Task(
         task_id="setup_guide",
         agent_type=AgentType.SETUP_GUIDE,
         output_filename="setup_guide.md",
         dependencies=[AgentType.API_DOCUMENTATION, AgentType.TECHNICAL_DOCUMENTATION, AgentType.DATABASE_SCHEMA],
-        kwargs_builder="with_api_and_db"
+        kwargs_builder="with_api_and_db",
+        phase_number=3
     ),
     "dev_doc": Phase2Task(
         task_id="dev_doc",
         agent_type=AgentType.DEVELOPER_DOCUMENTATION,
         output_filename="developer_guide.md",
         dependencies=[AgentType.API_DOCUMENTATION, AgentType.TECHNICAL_DOCUMENTATION],
-        kwargs_builder="with_api"
+        kwargs_builder="with_api",
+        phase_number=3
     ),
     "test_doc": Phase2Task(
         task_id="test_doc",
         agent_type=AgentType.TEST_DOCUMENTATION,
         output_filename="test_plan.md",
         dependencies=[AgentType.TECHNICAL_DOCUMENTATION],
-        kwargs_builder="simple_tech"
+        kwargs_builder="simple_tech",
+        phase_number=3
     ),
+    # ========== PHASE 4: User and Support Documents ==========
+    # User-facing documentation and support materials
     "user_doc": Phase2Task(
         task_id="user_doc",
         agent_type=AgentType.USER_DOCUMENTATION,
         output_filename="user_guide.md",
         dependencies=[AgentType.REQUIREMENTS_ANALYST],
-        kwargs_builder="simple_req"
+        kwargs_builder="simple_req",
+        phase_number=4
     ),
     "legal_doc": Phase2Task(
         task_id="legal_doc",
         agent_type=AgentType.LEGAL_COMPLIANCE,
         output_filename="legal_compliance.md",
         dependencies=[AgentType.TECHNICAL_DOCUMENTATION],
-        kwargs_builder="simple_tech"
+        kwargs_builder="simple_tech",
+        phase_number=4
     ),
     "support_playbook": Phase2Task(
         task_id="support_playbook",
         agent_type=AgentType.SUPPORT_PLAYBOOK,
         output_filename="support_playbook.md",
         dependencies=[AgentType.USER_DOCUMENTATION],
-        kwargs_builder="with_user_doc"
+        kwargs_builder="with_user_doc",
+        phase_number=4
     ),
-    # Team-only tasks
+    # ========== PHASE 4: User/Support and Project Management Documents ==========
+    # User-facing documentation, support materials, and project management
     "pm_doc": Phase2Task(
         task_id="pm_doc",
         agent_type=AgentType.PM_DOCUMENTATION,
         output_filename="project_plan.md",
         dependencies=[AgentType.PROJECT_CHARTER],
-        kwargs_builder="with_charter"
+        kwargs_builder="with_charter",
+        phase_number=4
     ),
     "stakeholder_doc": Phase2Task(
         task_id="stakeholder_doc",
         agent_type=AgentType.STAKEHOLDER_COMMUNICATION,
         output_filename="stakeholder_summary.md",
         dependencies=[AgentType.PM_DOCUMENTATION],
-        kwargs_builder="with_pm"
-    ),
-    "business_model": Phase2Task(
-        task_id="business_model",
-        agent_type=AgentType.BUSINESS_MODEL,
-        output_filename="business_model.md",
-        dependencies=[AgentType.PROJECT_CHARTER],
-        kwargs_builder="with_charter"
-    ),
-    "marketing_plan": Phase2Task(
-        task_id="marketing_plan",
-        agent_type=AgentType.MARKETING_PLAN,
-        output_filename="marketing_plan.md",
-        dependencies=[AgentType.BUSINESS_MODEL, AgentType.PROJECT_CHARTER],
-        kwargs_builder="with_business"
+        kwargs_builder="with_pm",
+        phase_number=4
     ),
 }
 
@@ -237,10 +257,10 @@ def build_kwargs_for_phase1_task(
         }
     
     elif task.kwargs_builder == "with_charter":
-        # User stories - needs requirements and optionally charter (team-only, may be None for individual)
+        # User stories, business_model, pm_doc - needs requirements and optionally charter (team-only, may be None for individual)
         context = context_manager.get_shared_context(project_id)
         if not context or not context.requirements:
-            raise ValueError("Requirements not found for user stories")
+            raise ValueError("Requirements not found")
         req_summary = context.get_requirements_summary()
         
         # Get charter content (optional - may not exist for individual profile)
@@ -257,52 +277,32 @@ def build_kwargs_for_phase1_task(
             "project_charter_summary": charter_content  # Can be None for individual profile
         }
     
-    elif task.kwargs_builder == "with_user_stories":
-        # Technical documentation - needs requirements and user stories
-        # In code-first mode, also uses code_analysis_summary
+    elif task.kwargs_builder == "with_business":
+        # Marketing plan - needs requirements, charter, and business model
         context = context_manager.get_shared_context(project_id)
         if not context or not context.requirements:
-            raise ValueError("Requirements not found for technical documentation")
+            raise ValueError("Requirements not found for marketing plan")
         req_summary = context.get_requirements_summary()
         
-        # Get user stories content
-        user_stories_content = deps_content.get(AgentType.USER_STORIES)
-        if not user_stories_content:
-            user_stories_output = context_manager.get_agent_output(project_id, AgentType.USER_STORIES)
-            if user_stories_output:
-                user_stories_content = user_stories_output.content
+        # Get charter content
+        charter_content = deps_content.get(AgentType.PROJECT_CHARTER)
+        if not charter_content:
+            charter_output = context_manager.get_agent_output(project_id, AgentType.PROJECT_CHARTER)
+            if charter_output:
+                charter_content = charter_output.content
         
-        kwargs = {
-            **base_kwargs,
-            "requirements_summary": req_summary,
-            "user_stories_summary": user_stories_content,
-            "pm_summary": None  # PM doc is in Phase 2
-        }
-        
-        # Add code analysis summary if available (code-first mode)
-        if code_analysis_summary:
-            kwargs["code_analysis_summary"] = code_analysis_summary
-        
-        return kwargs
-    
-    elif task.kwargs_builder == "with_technical":
-        # Database schema - needs requirements and technical documentation
-        context = context_manager.get_shared_context(project_id)
-        if not context or not context.requirements:
-            raise ValueError("Requirements not found for database schema")
-        req_summary = context.get_requirements_summary()
-        
-        # Get technical documentation content
-        technical_content = deps_content.get(AgentType.TECHNICAL_DOCUMENTATION)
-        if not technical_content:
-            technical_output = context_manager.get_agent_output(project_id, AgentType.TECHNICAL_DOCUMENTATION)
-            if technical_output:
-                technical_content = technical_output.content
+        # Get business model content
+        business_model_content = deps_content.get(AgentType.BUSINESS_MODEL)
+        if not business_model_content:
+            business_output = context_manager.get_agent_output(project_id, AgentType.BUSINESS_MODEL)
+            if business_output:
+                business_model_content = business_output.content
         
         return {
             **base_kwargs,
             "requirements_summary": req_summary,
-            "technical_summary": technical_content
+            "project_charter_summary": charter_content,
+            "business_model_summary": business_model_content
         }
     
     else:
@@ -439,6 +439,44 @@ def build_kwargs_for_task(
             "user_documentation_summary": user_doc_summary
         }
     
+    elif task.kwargs_builder == "with_user_stories":
+        # Technical documentation - needs requirements and user stories
+        # In code-first mode, also uses code_analysis_summary
+        # Get user stories content
+        user_stories_content = deps_content.get(AgentType.USER_STORIES)
+        if not user_stories_content:
+            user_stories_output = context_manager.get_agent_output(project_id, AgentType.USER_STORIES)
+            if user_stories_output:
+                user_stories_content = user_stories_output.content
+        
+        kwargs = {
+            **base_kwargs,
+            "requirements_summary": req_summary,
+            "user_stories_summary": user_stories_content,
+            "pm_summary": None  # PM doc is in Phase 2
+        }
+        
+        # Add code analysis summary if available (code-first mode)
+        if code_analysis_summary:
+            kwargs["code_analysis_summary"] = code_analysis_summary
+        
+        return kwargs
+    
+    elif task.kwargs_builder == "with_technical":
+        # Database schema - needs requirements and technical documentation
+        # Get technical documentation content
+        technical_content = deps_content.get(AgentType.TECHNICAL_DOCUMENTATION)
+        if not technical_content:
+            technical_output = context_manager.get_agent_output(project_id, AgentType.TECHNICAL_DOCUMENTATION)
+            if technical_output:
+                technical_content = technical_output.content
+        
+        return {
+            **base_kwargs,
+            "requirements_summary": req_summary,
+            "technical_summary": technical_content
+        }
+    
     else:
         raise ValueError(f"Unknown kwargs_builder: {task.kwargs_builder}")
 
@@ -449,17 +487,16 @@ def get_agent_for_phase1_task(coordinator: Any, agent_type: AgentType):
         AgentType.REQUIREMENTS_ANALYST: coordinator.requirements_analyst,
         AgentType.PROJECT_CHARTER: coordinator.project_charter_agent,
         AgentType.USER_STORIES: coordinator.user_stories_agent,
-        AgentType.TECHNICAL_DOCUMENTATION: coordinator.technical_agent,
-        AgentType.DATABASE_SCHEMA: coordinator.database_schema_agent,
     }
     return agent_map.get(agent_type)
 
 
 def get_agent_for_task(coordinator: Any, agent_type: AgentType):
-    """Get the agent instance for a given Phase 2 AgentType"""
+    """Get the agent instance for a given Phase 2+ AgentType"""
     agent_map = {
-        AgentType.API_DOCUMENTATION: coordinator.api_agent,
+        AgentType.TECHNICAL_DOCUMENTATION: coordinator.technical_agent,
         AgentType.DATABASE_SCHEMA: coordinator.database_schema_agent,
+        AgentType.API_DOCUMENTATION: coordinator.api_agent,
         AgentType.SETUP_GUIDE: coordinator.setup_guide_agent,
         AgentType.DEVELOPER_DOCUMENTATION: coordinator.developer_agent,
         AgentType.TEST_DOCUMENTATION: coordinator.test_agent,
@@ -468,8 +505,6 @@ def get_agent_for_task(coordinator: Any, agent_type: AgentType):
         AgentType.SUPPORT_PLAYBOOK: coordinator.support_playbook_agent,
         AgentType.PM_DOCUMENTATION: coordinator.pm_agent,
         AgentType.STAKEHOLDER_COMMUNICATION: coordinator.stakeholder_agent,
-        AgentType.BUSINESS_MODEL: coordinator.business_model_agent,
-        AgentType.MARKETING_PLAN: coordinator.marketing_plan_agent,
     }
     return agent_map.get(agent_type)
 
@@ -545,39 +580,79 @@ def build_phase1_task_dependencies(tasks: List[Phase1Task]) -> Dict[str, List[st
 
 def get_phase2_tasks_for_profile(profile: str = "team") -> List[Phase2Task]:
     """
-    Get Phase 2 task configurations for a given profile
+    Get all Phase 2+ task configurations for a given profile (backward compatibility)
     
     Args:
         profile: Project profile ("team" or "individual")
     
     Returns:
-        List of Phase2Task objects
+        List of Phase2Task objects (all phases 2-5)
     """
-    # Common tasks (both team and individual)
-    # NOTE: db_schema has been moved to Phase 1 (see coordinator.py)
-    common_tasks = [
-        "api_doc",
-        "setup_guide",
-        "dev_doc",
-        "test_doc",
-        "user_doc",
-        "legal_doc",
-        "support_playbook"
-    ]
+    return get_tasks_for_phases(profile=profile, phases=[2, 3, 4, 5])
+
+
+def get_tasks_for_phases(profile: str = "team", phases: List[int] = None) -> List[Phase2Task]:
+    """
+    Get task configurations for specific phases
     
-    tasks = [PHASE2_TASKS_CONFIG[task_id] for task_id in common_tasks]
+    Args:
+        profile: Project profile ("team" or "individual")
+        phases: List of phase numbers to include (e.g., [2, 3] for Phase 2 and 3)
+                If None, returns all phases (2-4)
     
-    # Team-only tasks
-    if profile == "team":
-        team_tasks = [
-            "pm_doc",
-            "stakeholder_doc",
-            "business_model",
-            "marketing_plan"
+    Returns:
+        List of Phase2Task objects for the specified phases
+    """
+    if phases is None:
+        phases = get_available_phases(profile=profile)
+    
+    # Get all tasks for the specified phases
+    all_tasks = [task for task in PHASE2_TASKS_CONFIG.values() if task.phase_number in phases]
+    
+    # Filter by profile
+    if profile == "individual":
+        # Individual profile: exclude tasks that depend on team-only Phase 1 tasks
+        # PROJECT_CHARTER is team-only, so exclude tasks that depend on it
+        # Also exclude tasks that depend on PM_DOCUMENTATION (which depends on PROJECT_CHARTER)
+        team_only_deps = {AgentType.PROJECT_CHARTER, AgentType.PM_DOCUMENTATION}
+        tasks = [
+            task for task in all_tasks
+            if not any(dep in team_only_deps for dep in task.dependencies)
         ]
-        tasks.extend([PHASE2_TASKS_CONFIG[task_id] for task_id in team_tasks])
+    else:
+        tasks = all_tasks
     
     return tasks
+
+
+def get_tasks_for_phase(profile: str = "team", phase_number: int = 2) -> List[Phase2Task]:
+    """
+    Get task configurations for a specific phase
+    
+    Args:
+        profile: Project profile ("team" or "individual")
+        phase_number: Phase number (2, 3, 4, or 5)
+    
+    Returns:
+        List of Phase2Task objects for the specified phase
+    """
+    return get_tasks_for_phases(profile=profile, phases=[phase_number])
+
+
+def get_available_phases(profile: str = "team") -> List[int]:
+    """
+    Get list of available phase numbers for a given profile
+    
+    Args:
+        profile: Project profile ("team" or "individual")
+    
+    Returns:
+        List of available phase numbers (Phase 2, 3, 4)
+        Note: Phase 1 is always executed first, Phase 5 has been removed
+    """
+    # Both team and individual profiles have the same Phase 2+ structure
+    # Phase 5 (business docs) has been moved to Phase 1
+    return [2, 3, 4]
 
 
 def build_task_dependencies(tasks: List[Phase2Task]) -> Dict[str, List[str]]:
@@ -595,15 +670,16 @@ def build_task_dependencies(tasks: List[Phase2Task]) -> Dict[str, List[str]]:
     # Create mapping from AgentType to task_id
     agent_type_to_task_id = {task.agent_type: task.task_id for task in tasks}
     
-    # Also map Phase 1 agent types to their task_ids (they're not in Phase 2, but we need to track them)
+    # Also map Phase 1 agent types to their task_ids (they're not in Phase 2+, but we need to track them)
     # Phase 1 tasks are already complete, so we can reference them by their AgentType
-    # NOTE: DATABASE_SCHEMA is now in Phase 1, so it's included here
+    # NOTE: TECHNICAL_DOCUMENTATION and DATABASE_SCHEMA have been moved to Phase 2 for parallel execution
+    # NOTE: BUSINESS_MODEL and MARKETING_PLAN have been moved to Phase 1 for quick decision-making
     phase1_agent_types = [
         AgentType.REQUIREMENTS_ANALYST,
         AgentType.PROJECT_CHARTER,
         AgentType.USER_STORIES,
-        AgentType.TECHNICAL_DOCUMENTATION,
-        AgentType.DATABASE_SCHEMA  # Moved to Phase 1
+        AgentType.BUSINESS_MODEL,
+        AgentType.MARKETING_PLAN,
     ]
     
     # Build dependency map
