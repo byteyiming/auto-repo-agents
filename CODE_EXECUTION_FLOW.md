@@ -37,9 +37,10 @@ async def lifespan(app: FastAPI):
     # - APIDocumentationAgent
     # - ... 等等
     # 每个 Agent 都会：
-    #   1. 创建 LLM Provider (Gemini/Ollama/OpenAI)
-    #   2. 创建 FileManager (文件管理器)
-    #   3. 配置日志和速率限制
+    #   1. 创建 LLM Provider (Gemini/Ollama/OpenAI，从 LLM_PROVIDER 环境变量读取)
+    #   2. 配置 Phase 模型选择（根据当前 phase 自动选择模型）
+    #   3. 创建 FileManager (文件管理器)
+    #   4. 配置日志和速率限制
     
     yield  # 应用运行中...
     
@@ -492,6 +493,11 @@ class RequirementsAnalyst(BaseAgent):
         # - GeminiProvider (调用 Google Gemini API)
         # - OllamaProvider (调用本地 Ollama)
         # - OpenAIProvider (调用 OpenAI API)
+        # 
+        # 模型选择：
+        # - 如果配置了 Phase 模型（如 OLLAMA_PHASE1_MODEL），会自动使用对应 phase 的模型
+        # - 否则使用默认模型（如 OLLAMA_DEFAULT_MODEL）
+        # - 支持为不同 phase 配置不同模型，实现速度和质量的平衡
         
         # 3. 清理响应
         cleaned_response = self._clean_response(response)

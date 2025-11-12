@@ -37,7 +37,8 @@ async def lifespan(app: FastAPI):
 
 2. **WorkflowCoordinator Initialization**:
    - Loads environment variables and settings
-   - **Forces all agents to use Gemini** (hardcoded, ignores env vars)
+   - Determines default provider from `LLM_PROVIDER` env var (default: `gemini`)
+   - Supports phase-based model configuration for all providers (Ollama, Gemini, OpenAI)
    - Initializes 21 agents:
      - Requirements Analyst
      - Project Charter Agent
@@ -61,9 +62,10 @@ async def lifespan(app: FastAPI):
      - Claude CLI Documentation Agent
      - Code Analyst Agent
    - Each agent is initialized with:
-     - Gemini provider (hardcoded)
-     - Default model: `gemini-2.0-flash`
-     - Temperature: 0.7 (Gemini default)
+     - LLM provider (from `LLM_PROVIDER` env var: `gemini`, `ollama`, or `openai`)
+     - Default model (from provider-specific env vars)
+     - Phase-based model selection (automatically selects model based on current phase)
+     - Temperature: Provider-specific default (0.7 for Gemini, 0.3 for Ollama)
      - Rate limiter (shared across all agents)
      - File manager
 

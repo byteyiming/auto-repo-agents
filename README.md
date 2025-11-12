@@ -41,6 +41,13 @@ LLM_PROVIDER=gemini  # Options: gemini, ollama, openai (default: gemini)
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_DEFAULT_MODEL=gemini-2.0-flash  # Optional: gemini-2.5-flash, gemini-2.5-pro
 
+# Gemini Phase Model Configuration (Optional - Advanced)
+# Configure different models for different phases to balance speed and quality
+GEMINI_PHASE1_MODEL=gemini-2.0-flash  # Phase 1: Fast decision documents (high free quota)
+GEMINI_PHASE2_MODEL=gemini-2.0-pro    # Phase 2: High-quality technical documents
+GEMINI_PHASE3_MODEL=gemini-2.0-pro    # Phase 3: High-quality API/dev documents
+GEMINI_PHASE4_MODEL=gemini-2.0-flash  # Phase 4: User/support documents
+
 # Ollama Configuration (if LLM_PROVIDER=ollama)
 OLLAMA_BASE_URL=http://localhost:11434  # Optional, defaults to localhost:11434
 OLLAMA_MODEL=dolphin3  # Optional, defaults to first available model
@@ -108,14 +115,15 @@ uv run python -m src.web.app
   - **Token Limits**: 1M TPM (tokens per minute), 15 RPM (requests per minute), 200 RPD (requests per day) on free tier
   - **High-Quality Output**: Optimized for complex documentation tasks
   - **Configuration**: Set `LLM_PROVIDER=gemini` and `GEMINI_DEFAULT_MODEL` environment variables
+  - **Phase Model Configuration**: Use `GEMINI_PHASE{N}_MODEL` to configure different models for different phases (e.g., `GEMINI_PHASE1_MODEL=gemini-2.0-flash`, `GEMINI_PHASE2_MODEL=gemini-2.0-pro`)
 
 - **Ollama Provider** (Local Development):
   - **Usage**: Set `LLM_PROVIDER=ollama` in `.env` file
   - **Benefits**: Fast, local, no API costs, privacy
-  - **Models**: Any Ollama model (e.g., `dolphin3`, `llama3`, `mistral`)
+  - **Models**: Any Ollama model (e.g., `dolphin3`, `mixtral`)
   - **Configuration**: 
     - `OLLAMA_BASE_URL`: Ollama API base URL (default: `http://localhost:11434`)
-    - `OLLAMA_MODEL`: Model name (default: `dolphin3`)
+    - `OLLAMA_DEFAULT_MODEL`: Model name (default: `dolphin3`)
     - `OLLAMA_MAX_TOKENS`: **CRITICAL** - Maximum tokens for completion (default: `8192`)
       - Many local models have very low default max_tokens (e.g., 512), causing incomplete outputs
       - Set to `8192` (8K) for small models, `16384` (16K) for medium models, `32768` (32K) for large models
@@ -124,12 +132,14 @@ uv run python -m src.web.app
       - Dynamic timeout calculation: base timeout + estimated generation time (based on max_tokens)
       - Maximum timeout: `1800` seconds (30 minutes) for very long outputs
       - The timeout automatically increases with `OLLAMA_MAX_TOKENS` to ensure complete document generation
+  - **Phase Model Configuration**: Use `OLLAMA_PHASE{N}_MODEL` to configure different models for different phases (e.g., `OLLAMA_PHASE1_MODEL=dolphin3`, `OLLAMA_PHASE2_MODEL=mixtral`)
 
 - **OpenAI Provider**:
   - **Usage**: Set `LLM_PROVIDER=openai` in `.env` file
   - **Required**: Install optional dependency: `pip install .[openai]` or `uv pip install .[openai]`
   - **Models**: `gpt-4o-mini` (default), `gpt-4o`, `gpt-3.5-turbo`
   - **Configuration**: Set `OPENAI_API_KEY` environment variable
+  - **Phase Model Configuration**: Use `OPENAI_PHASE{N}_MODEL` to configure different models for different phases (e.g., `OPENAI_PHASE1_MODEL=gpt-4o-mini`, `OPENAI_PHASE2_MODEL=gpt-4o`)
 
 ## 🏗️ Project Structure
 
@@ -484,10 +494,14 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Configurable Providers**: Gemini (default), Ollama (local), OpenAI (GPT models)
 - **Default Provider**: `gemini` (configurable via `LLM_PROVIDER` environment variable)
 - **Per-Agent Configuration**: Optional per-agent provider overrides for hybrid setups
+- **Phase Model Configuration**: Configure different models for different workflow phases to balance speed and quality
+  - **Ollama**: `OLLAMA_PHASE{N}_MODEL` (e.g., Phase 1: `dolphin3`, Phase 2: `mixtral`)
+  - **Gemini**: `GEMINI_PHASE{N}_MODEL` (e.g., Phase 1: `gemini-2.0-flash`, Phase 2: `gemini-2.0-pro`)
+  - **OpenAI**: `OPENAI_PHASE{N}_MODEL` (e.g., Phase 1: `gpt-4o-mini`, Phase 2: `gpt-4o`)
 - **Gemini Models**: `gemini-2.0-flash` (recommended), `gemini-2.5-flash`, `gemini-2.5-pro`
-- **Ollama Models**: Any Ollama model (e.g., `dolphin3`, `llama3`, `mistral`)
+- **Ollama Models**: Any Ollama model (e.g., `dolphin3`, `mixtral`)
 - **OpenAI Models**: `gpt-4o-mini`, `gpt-4o`, `gpt-3.5-turbo`
-- **Benefits**: Flexibility, cost optimization, local development support, hybrid configurations
+- **Benefits**: Flexibility, cost optimization, local development support, hybrid configurations, phase-based optimization
 
 ### Hybrid Workflow
 - **Phase 1**: DAG-based parallel execution with quality gates and iterative improvement for foundational documents (Requirements, Project Charter, User Stories, Technical Documentation, Database Schema)
@@ -511,6 +525,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 📚 Additional Resources
 
 - **Workflow Documentation**: See [WORKFLOW_DOCUMENTATION.md](WORKFLOW_DOCUMENTATION.md) for detailed workflow documentation
+- **Phase Model Configuration**: See [docs/PHASE_MODEL_CONFIG.md](docs/PHASE_MODEL_CONFIG.md) for phase-based model configuration guide
+- **Ollama Setup**: See [docs/OLLAMA_SETUP.md](docs/OLLAMA_SETUP.md) for Ollama local setup instructions
 - **Configuration Guide**: See [src/config/README.md](src/config/README.md) for detailed configuration options
 - **Examples**: See [examples/](examples/) directory for usage examples
 - **Generated Docs**: See [docs/](docs/) directory for generated documentation index
