@@ -140,6 +140,7 @@ class BaseAgent(ABC):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        phase_number: Optional[int] = None,
         **kwargs
     ) -> str:
         """
@@ -171,6 +172,14 @@ class BaseAgent(ABC):
         # Use agent's default temperature if not explicitly provided
         if temperature is None:
             temperature = self.default_temperature
+        
+        # Get model for phase if phase_number is provided and model not explicitly set
+        if model is None and phase_number is not None:
+            from src.utils.phase_model_config import get_model_for_phase
+            phase_model = get_model_for_phase(phase_number, self.provider_name)
+            if phase_model:
+                model = phase_model
+                logger.debug(f"{self.agent_name} using phase {phase_number} model: {model}")
         
         model_to_use = model or self.model_name
         logger.debug(f"{self.agent_name} calling LLM (model: {model_to_use}, prompt length: {len(prompt)}, temperature: {temperature})")
@@ -218,6 +227,7 @@ class BaseAgent(ABC):
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        phase_number: Optional[int] = None,
         **kwargs
     ) -> str:
         """
@@ -249,6 +259,20 @@ class BaseAgent(ABC):
         # Use agent's default temperature if not explicitly provided
         if temperature is None:
             temperature = self.default_temperature
+        
+        # Get model for phase if phase_number is provided and model not explicitly set
+        # Also check agent instance for _current_phase_number attribute
+        if model is None:
+            phase_to_use = phase_number
+            if phase_to_use is None and hasattr(self, '_current_phase_number'):
+                phase_to_use = self._current_phase_number
+            
+            if phase_to_use is not None:
+                from src.utils.phase_model_config import get_model_for_phase
+                phase_model = get_model_for_phase(phase_to_use, self.provider_name)
+                if phase_model:
+                    model = phase_model
+                    logger.debug(f"{self.agent_name} using phase {phase_to_use} model: {model}")
         
         model_to_use = model or self.model_name
         logger.debug(f"{self.agent_name} calling LLM (async) (model: {model_to_use}, prompt length: {len(prompt)}, temperature: {temperature})")

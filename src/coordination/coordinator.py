@@ -1889,6 +1889,9 @@ Improvement Suggestions:
                     if not agent:
                         raise ValueError(f"Agent not found for {task.agent_type.value}")
                     
+                    # Set phase number for phase-based model selection
+                    agent._current_phase_number = 1
+                    
                     # Execute with quality gate (async version)
                     logger.info(f"🔍 Executing Phase 1 task {task.task_id} with quality gate (threshold: {task.quality_threshold})...")
                     file_path, content = await self._async_run_agent_with_quality_loop(
@@ -2144,6 +2147,9 @@ Improvement Suggestions:
                         agent = get_agent_for_task(self, task.agent_type)
                         if not agent:
                             raise ValueError(f"Agent not found for {task.agent_type.value}")
+                        
+                        # Set phase number for phase-based model selection
+                        agent._current_phase_number = phase_num
                         
                         # Execute agent.generate_and_save (async if available, otherwise sync in executor)
                         if hasattr(agent, 'async_generate_and_save') and asyncio.iscoroutinefunction(agent.async_generate_and_save):
