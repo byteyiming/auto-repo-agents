@@ -35,5 +35,6 @@ echo "✅ 启动服务器在 http://localhost:8000"
 echo "   按 Ctrl+C 停止服务器"
 echo ""
 
-python3 -m uvicorn src.web.app:app --reload --host 0.0.0.0 --port 8000
+# Start server (disable access logs to reduce noise)
+python3 -m uvicorn src.web.app:app --reload --host 0.0.0.0 --port 8000 --no-access-log
 
