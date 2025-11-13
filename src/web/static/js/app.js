@@ -141,6 +141,14 @@ function connectWebSocket(projectId) {
 // Handle WebSocket messages
 function handleWebSocketMessage(message) {
     switch (message.type) {
+        case 'connected':
+            // WebSocket connection confirmed
+            updateWebSocketStatus(true, false);
+            showStatus('Connected. Waiting for updates...', 'info');
+            break;
+        case 'heartbeat':
+            // Heartbeat message - just keep connection alive, no UI update needed
+            break;
         case 'start':
             updateProgress(5);
             showStatus('Generation started...', 'info');
@@ -165,17 +173,21 @@ function handleWebSocketMessage(message) {
             break;
         case 'phase_1':
             // Phase 1 document complete - show review UI for this specific document
-            if (message.status === 'complete') {
+            if (message.status === 'complete' || message.status === 'awaiting_approval') {
                 const docName = message.document || message.task_id || 'Document';
-                showDocumentReview(docName, message.task_id);
-            } else if (message.status === 'awaiting_approval') {
-                const docName = message.document || message.task_id || 'Document';
-                showDocumentReview(docName, message.task_id);
+                // Use agent_type from message if available, otherwise fall back to task_id mapping
+                const agentType = message.agent_type || (message.task_id ? mapTaskIdToAgentType(message.task_id) : null);
+                showDocumentReview(docName, message.task_id, agentType);
             }
             break;
         case 'document_approved':
             // Document approved - hide review UI and continue
-            hideDocumentReview();
+            // Note: Button states are already reset in approvePhase1() after API success
+            // This is just a confirmation message
+            if (currentReviewingAgentType === message.agent_type) {
+                // Only hide if this is the document we just approved
+                hideDocumentReview();
+            }
             showStatus(`Document ${message.agent_type || 'document'} approved! Continuing...`, 'success');
             break;
         case 'document_rejected':
@@ -455,14 +467,32 @@ function createLevelSection(level, levelData) {
 
 // Preview document
 async function previewDocument(doc) {
+    // Prevent multiple simultaneous requests
+    if (previewModal.dataset.loading === 'true') {
+        return;
+    }
+    
     try {
+        previewModal.dataset.loading = 'true';
         previewModal.classList.remove('hidden');
         previewContent.innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div><p class="mt-4 text-gray-500">Loading preview...</p></div>';
         
-        const response = await fetch(`/api/preview/${projectId}/${doc.type}`);
-        if (!response.ok) throw new Error('Failed to fetch');
-        const text = await response.text();
+        let text;
         
+        // If content is provided directly, use it (for Phase 1 documents)
+        if (doc.content) {
+            text = doc.content;
+        } else {
+            // Otherwise, fetch from API
+            const response = await fetch(`/api/preview/${projectId}/${doc.type}`);
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => 'Failed to fetch');
+                throw new Error(errorText || 'Failed to fetch');
+            }
+            text = await response.text();
+        }
+        
+        // Render markdown
         if (typeof marked !== 'undefined') {
             previewContent.innerHTML = marked.parse(text);
         } else {
@@ -471,6 +501,8 @@ async function previewDocument(doc) {
     } catch (error) {
         console.error('Error previewing:', error);
         previewContent.innerHTML = `<div class="text-center py-8 text-red-600"><p>Error loading preview: ${error.message}</p></div>`;
+    } finally {
+        previewModal.dataset.loading = 'false';
     }
 }
 
@@ -540,28 +572,98 @@ window.downloadAllDocuments = downloadAllDocuments; // Make it global
 let currentReviewingDocument = null;
 let currentReviewingAgentType = null;
 
-async function showDocumentReview(docName, taskId) {
+// Helper function to map task_id to agent_type (fallback)
+// Refresh the previous documents list to show newly approved documents
+async function refreshPreviousDocumentsList() {
+    if (!projectId) return;
+    
+    const previousDocumentsSection = document.getElementById('previousDocumentsSection');
+    const previousDocumentsList = document.getElementById('previousDocumentsList');
+    
+    if (!previousDocumentsSection || !previousDocumentsList) return;
+    
+    try {
+        const prevDocsResponse = await fetch(`/api/phase1-documents-list/${projectId}`);
+        if (prevDocsResponse.ok) {
+            const prevDocsData = await prevDocsResponse.json();
+            // Show all approved documents
+            const previousDocs = prevDocsData.documents.filter(doc => doc.status === 'approved');
+            
+            if (previousDocs.length > 0) {
+                previousDocumentsList.innerHTML = '';
+                previousDocs.forEach(doc => {
+                    const docItem = createPreviousDocumentItem(doc);
+                    previousDocumentsList.appendChild(docItem);
+                });
+                previousDocumentsSection.classList.remove('hidden');
+            } else {
+                previousDocumentsSection.classList.add('hidden');
+            }
+        }
+    } catch (error) {
+        console.debug('Error refreshing previous documents:', error);
+    }
+}
+
+function mapTaskIdToAgentType(taskId) {
+const taskToAgentType = {
+        'requirements': 'requirements_analyst',
+        'project_charter': 'project_charter',
+        'user_stories': 'user_stories',
+        'business_model': 'business_model',
+        'marketing_plan': 'marketing_plan',
+        'pm_doc': 'pm_documentation',
+        'stakeholder_doc': 'stakeholder_communication',
+        'wbs': 'wbs_agent',
+        'technical_doc': 'technical_documentation'
+    };
+    return taskToAgentType[taskId] || taskId;
+}
+
+async function showDocumentReview(docName, taskId, agentType = null) {
     if (!projectId) {
         console.error('No project ID available for document review');
         return;
     }
     
-    // Map task_id to agent_type
-    const taskToAgentType = {
-        'requirements': 'requirements_analyst',
-        'technical_doc': 'technical_documentation'
-    };
-    
-    const agentType = taskToAgentType[taskId] || taskId;
-    currentReviewingAgentType = agentType;
+    // Use provided agent_type or map from task_id
+    const finalAgentType = agentType || mapTaskIdToAgentType(taskId);
+    currentReviewingAgentType = finalAgentType;
     currentReviewingDocument = docName;
     
     const phase1Review = document.getElementById('phase1Review');
     const phase1Documents = document.getElementById('phase1Documents');
+    const previousDocumentsSection = document.getElementById('previousDocumentsSection');
+    const previousDocumentsList = document.getElementById('previousDocumentsList');
     
     try {
+        // Fetch previously generated documents
+        try {
+            const prevDocsResponse = await fetch(`/api/phase1-documents-list/${projectId}`);
+            if (prevDocsResponse.ok) {
+                const prevDocsData = await prevDocsResponse.json();
+                const previousDocs = prevDocsData.documents.filter(doc => 
+                    doc.agent_type !== finalAgentType && doc.status === 'approved'
+                );
+                
+                if (previousDocs.length > 0) {
+                    previousDocumentsList.innerHTML = '';
+                    previousDocs.forEach(doc => {
+                        const docItem = createPreviousDocumentItem(doc);
+                        previousDocumentsList.appendChild(docItem);
+                    });
+                    previousDocumentsSection.classList.remove('hidden');
+                } else {
+                    previousDocumentsSection.classList.add('hidden');
+                }
+            }
+        } catch (error) {
+            console.debug('Error loading previous documents:', error);
+            previousDocumentsSection.classList.add('hidden');
+        }
+        
         // Fetch the specific document
-        const response = await fetch(`/api/document/${projectId}/${agentType}`);
+        const response = await fetch(`/api/document/${projectId}/${finalAgentType}`);
         if (!response.ok) {
             throw new Error('Failed to fetch document');
         }
@@ -585,6 +687,21 @@ async function showDocumentReview(docName, taskId) {
             descElement.textContent = `${docName} has been generated and is ready for your review. Please review it below and approve to continue with the next document.`;
         }
         
+        // Ensure button states are reset before showing review UI
+        const approveBtn = document.getElementById('approvePhase1Btn');
+        const rejectBtn = document.getElementById('rejectPhase1Btn');
+        if (approveBtn) {
+            approveBtn.disabled = false;
+            approveBtn.textContent = '✅ Approve & Continue';
+        }
+        if (rejectBtn) {
+            rejectBtn.disabled = false;
+            rejectBtn.textContent = '❌ Reject & Stop';
+        }
+        
+        // Reset approval flag
+        isApproving = false;
+        
         // Show review UI
         phase1Review.classList.remove('hidden');
         phase1Review.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -606,6 +723,56 @@ async function showDocumentReview(docName, taskId) {
         console.error('Error loading document:', error);
         showStatus('Error loading document: ' + error.message, 'error');
     }
+}
+
+function createPreviousDocumentItem(doc) {
+    const item = document.createElement('div');
+    item.className = 'flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors';
+    
+    const left = document.createElement('div');
+    left.className = 'flex items-center gap-2 flex-1';
+    
+    const icon = document.createElement('span');
+    icon.textContent = '✅';
+    icon.className = 'text-sm';
+    left.appendChild(icon);
+    
+    const name = document.createElement('span');
+    name.textContent = doc.display_name;
+    name.className = 'text-sm font-medium text-gray-700';
+    left.appendChild(name);
+    
+    if (doc.quality_score) {
+        const score = document.createElement('span');
+        score.textContent = `Quality: ${Math.round(doc.quality_score)}%`;
+        score.className = 'text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full';
+        left.appendChild(score);
+    }
+    
+    item.appendChild(left);
+    
+    const previewBtn = document.createElement('button');
+    previewBtn.textContent = 'Preview';
+    previewBtn.className = 'px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors';
+    previewBtn.onclick = async () => {
+        try {
+            const response = await fetch(`/api/document/${projectId}/${doc.agent_type}`);
+            if (response.ok) {
+                const docData = await response.json();
+                previewDocument({
+                    type: doc.agent_type,
+                    display_name: doc.display_name,
+                    content: docData.content
+                });
+            }
+        } catch (error) {
+            console.error('Error previewing previous document:', error);
+            showStatus('Error previewing document: ' + error.message, 'error');
+        }
+    };
+    item.appendChild(previewBtn);
+    
+    return item;
 }
 
 function createDocumentCard(docName, docData) {
@@ -658,13 +825,30 @@ function createDocumentCard(docName, docData) {
 
 function hideDocumentReview() {
     const phase1Review = document.getElementById('phase1Review');
-    phase1Review.classList.add('hidden');
+    if (phase1Review) {
+        phase1Review.classList.add('hidden');
+    }
     
     // Clear notes
     const notesText = document.getElementById('approvalNotesText');
     if (notesText) {
         notesText.value = '';
     }
+    
+    // Reset button states
+    const approveBtn = document.getElementById('approvePhase1Btn');
+    const rejectBtn = document.getElementById('rejectPhase1Btn');
+    if (approveBtn) {
+        approveBtn.disabled = false;
+        approveBtn.textContent = '✅ Approve & Continue';
+    }
+    if (rejectBtn) {
+        rejectBtn.disabled = false;
+        rejectBtn.textContent = '❌ Reject & Stop';
+    }
+    
+    // Reset approval flag
+    isApproving = false;
     
     currentReviewingDocument = null;
     currentReviewingAgentType = null;
@@ -683,15 +867,39 @@ function hidePhase1Review() {
     hideDocumentReview();
 }
 
+// Track if approval is in progress to prevent duplicate requests
+let isApproving = false;
+
 async function approvePhase1() {
     if (!projectId || !currentReviewingAgentType) {
         showStatus('No document available for approval', 'error');
         return;
     }
     
+    // Prevent duplicate approval requests
+    if (isApproving) {
+        console.log('Approval already in progress, ignoring duplicate request');
+        return;
+    }
+    
     const approveBtn = document.getElementById('approvePhase1Btn');
     const rejectBtn = document.getElementById('rejectPhase1Btn');
     const notesText = document.getElementById('approvalNotesText');
+    
+    // Check if buttons exist
+    if (!approveBtn || !rejectBtn) {
+        console.error('Approval buttons not found');
+        return;
+    }
+    
+    // Prevent duplicate clicks
+    if (approveBtn.disabled) {
+        console.log('Button already disabled, approval in progress');
+        return;
+    }
+    
+    // Set approval in progress flag
+    isApproving = true;
     
     // Disable buttons
     approveBtn.disabled = true;
@@ -700,6 +908,8 @@ async function approvePhase1() {
     
     try {
         const notes = notesText ? notesText.value.trim() || null : null;
+        console.log(`Approving document: ${currentReviewingAgentType} for project: ${projectId}`);
+        
         const response = await fetch(`/api/approve-document/${projectId}/${currentReviewingAgentType}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -712,14 +922,32 @@ async function approvePhase1() {
         }
         
         const data = await response.json();
+        console.log('Document approved successfully:', data);
+        
         showStatus(`${currentReviewingDocument || 'Document'} approved! Workflow will continue...`, 'success');
-        hideDocumentReview();
         
         // Update progress
         updateProgress(30);
+        
+        // Refresh the previous documents list to show the newly approved document
+        await refreshPreviousDocumentsList();
+        
+        // Hide review UI and reset button states
+        hideDocumentReview();
+        
+        // Reset approval flag
+        isApproving = false;
+        
+        // Note: The workflow will continue automatically after approval
+        // The next document will be generated and shown via WebSocket message
     } catch (error) {
         console.error('Error approving document:', error);
         showStatus('Error approving document: ' + error.message, 'error');
+        
+        // Reset approval flag on error
+        isApproving = false;
+        
+        // Reset button states on error
         if (approveBtn) {
             approveBtn.disabled = false;
             approveBtn.textContent = '✅ Approve & Continue';

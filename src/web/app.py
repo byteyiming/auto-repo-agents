@@ -19,8 +19,18 @@ from src.context.context_manager import ContextManager
 from src.context.shared_context import AgentType
 from src.utils.document_organizer import get_documents_summary
 from src.utils.logger import get_logger
+import logging
 
 logger = get_logger(__name__)
+
+# Disable uvicorn WebSocket connection logs (connection open/closed messages)
+# This applies regardless of how the app is started (directly or via uvicorn CLI)
+uvicorn_logger = logging.getLogger("uvicorn")
+uvicorn_logger.setLevel(logging.WARNING)
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.setLevel(logging.WARNING)
+websocket_logger = logging.getLogger("uvicorn.protocols.websockets")
+websocket_logger.setLevel(logging.WARNING)
 
 
 # Global coordinator and context manager
@@ -41,7 +51,7 @@ class WebSocketManager:
         if project_id not in self.active_connections:
             self.active_connections[project_id] = set() 
         self.active_connections[project_id].add(websocket)
-        logger.info(f"WebSocket connected for project: {project_id} (total connections: {len(self.active_connections[project_id])})")
+        # WebSocket connection logging disabled
     
     def disconnect(self, websocket: WebSocket, project_id: str):
         """Remove a WebSocket connection"""
@@ -49,7 +59,7 @@ class WebSocketManager:
             self.active_connections[project_id].discard(websocket)
             if not self.active_connections[project_id]:
                 del self.active_connections[project_id]
-        logger.info(f"WebSocket disconnected for project: {project_id}")
+        # WebSocket disconnection logging disabled
     
     async def send_progress(self, project_id: str, message: dict):
         """Send progress update to all connections for a project"""
@@ -880,13 +890,57 @@ async def run_generation_async(
         async def progress_callback(phase: str, doc_name: str, status: str):
             """Send progress update via WebSocket when each document completes"""
             try:
-                await websocket_manager.send_progress(project_id, {
-                    "type": "document_complete",
-                    "phase": phase,
-                    "document": doc_name,
-                    "status": status,
-                    "message": f"✅ {doc_name} completed" if status == "complete" else f"❌ {doc_name} failed"
-                })
+                # Map phase to message type for frontend compatibility
+                if phase == "phase_1":
+                    # Map document name to task_id and agent_type for Phase 1 documents
+                    doc_name_to_task_id = {
+                        "Requirements": "requirements",
+                        "Project Charter": "project_charter",
+                        "User Stories": "user_stories",
+                        "Business Model": "business_model",
+                        "Marketing Plan": "marketing_plan",
+                        "PM Documentation": "pm_doc",
+                        "Stakeholder Communication": "stakeholder_doc",
+                        "Work Breakdown Structure": "wbs",
+                        "Technical Specification": "technical_doc",
+                    }
+                    
+                    task_id = doc_name_to_task_id.get(doc_name, doc_name.lower().replace(" ", "_"))
+                    
+                    # Map task_id to agent_type (for API endpoint)
+                    task_id_to_agent_type = {
+                        "requirements": "requirements_analyst",
+                        "project_charter": "project_charter",
+                        "user_stories": "user_stories",
+                        "business_model": "business_model",
+                        "marketing_plan": "marketing_plan",
+                        "pm_doc": "pm_documentation",
+                        "stakeholder_doc": "stakeholder_communication",
+                        "wbs": "wbs_agent",
+                        "technical_doc": "technical_documentation",
+                    }
+                    
+                    agent_type = task_id_to_agent_type.get(task_id, task_id)
+                    
+                    # Send phase_1 type message for Phase 1 documents (for approval UI)
+                    message = {
+                        "type": "phase_1",
+                        "document": doc_name,
+                        "status": status,
+                        "task_id": task_id,
+                        "agent_type": agent_type,
+                        "message": f"✅ {doc_name} completed" if status == "complete" else f"⏸️ {doc_name} awaiting approval" if status == "awaiting_approval" else f"❌ {doc_name} failed"
+                    }
+                else:
+                    # Send generic document_complete for other phases
+                    message = {
+                        "type": "document_complete",
+                        "phase": phase,
+                        "document": doc_name,
+                        "status": status,
+                        "message": f"✅ {doc_name} completed" if status == "complete" else f"❌ {doc_name} failed"
+                    }
+                await websocket_manager.send_progress(project_id, message)
             except Exception as e:
                 logger.warning(f"Failed to send progress update via WebSocket: {e}")
         
@@ -1199,34 +1253,110 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
         websocket_manager.disconnect(websocket, project_id)
 
 
-@app.get("/api/preview/{project_id}/{doc_type}")
-async def preview_document(project_id: str, doc_type: str):
-    """Preview a generated document (returns markdown content)"""
+@app.get("/api/preview/{project_id}/{doc_or_agent_type}")
+async def preview_document(project_id: str, doc_or_agent_type: str):
+    """Preview a generated document (returns markdown content)
+    
+    Supports both Phase 1 documents (during approval) and completed documents.
+    Accepts either doc_type (e.g., "requirements") or agent_type (e.g., "requirements_analyst").
+    """
     status = context_manager.get_project_status(project_id)
     
     if not status:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    if status["status"] != "complete":
-        raise HTTPException(status_code=400, detail="Generation not complete")
+    # Map doc_type to agent_type for Phase 1 document lookup
+    doc_type_to_agent_type = {
+        "requirements": "requirements_analyst",
+        "project_charter": "project_charter",
+        "user_stories": "user_stories",
+        "business_model": "business_model",
+        "marketing_plan": "marketing_plan",
+        "pm_documentation": "pm_documentation",
+        "stakeholder_communication": "stakeholder_communication",
+        "technical_documentation": "technical_documentation",
+        "database_schema": "database_schema",
+        "api_documentation": "api_documentation",
+        "setup_guide": "setup_guide",
+        "developer_documentation": "developer_documentation",
+        "test_documentation": "test_documentation",
+        "user_documentation": "user_documentation",
+        "legal_compliance": "legal_compliance",
+        "support_playbook": "support_playbook",
+        "wbs_agent": "wbs_agent",
+        "work_breakdown_structure": "wbs_agent",
+    }
     
-    results = status.get("results", {})
-    files = results.get("files", {})
+    # Determine if input is doc_type or agent_type
+    # Try to find as agent_type first
+    agent_type = doc_or_agent_type
+    if doc_or_agent_type in doc_type_to_agent_type:
+        agent_type = doc_type_to_agent_type[doc_or_agent_type]
     
-    if doc_type not in files:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    file_path = Path(files[doc_type])
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found")
-    
-    # Read file content
+    # Try to get document from agent outputs (works for Phase 1 documents)
     try:
-        content = file_path.read_text(encoding='utf-8')
-        return Response(content=content, media_type='text/markdown')
-    except Exception as e:
-        logger.error(f"Error reading file {file_path}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+        agent_type_enum = AgentType(agent_type)
+        document_output = context_manager.get_agent_output(project_id, agent_type_enum)
+        
+        if document_output and document_output.content:
+            return Response(content=document_output.content, media_type='text/markdown')
+    except (ValueError, AttributeError):
+        # Invalid agent_type or no output, try file-based approach
+        pass
+    
+    # Fallback: Try to get from results/files (for completed documents)
+    # Use original doc_or_agent_type as doc_type for file lookup
+    doc_type = doc_or_agent_type
+    
+    # Map agent_type back to doc_type if needed
+    agent_to_doc_type = {
+        "requirements_analyst": "requirements",
+        "project_charter": "project_charter",
+        "user_stories": "user_stories",
+        "business_model": "business_model",
+        "marketing_plan": "marketing_plan",
+        "pm_documentation": "pm_documentation",
+        "stakeholder_communication": "stakeholder_communication",
+        "technical_documentation": "technical_documentation",
+        "database_schema": "database_schema",
+        "api_documentation": "api_documentation",
+        "setup_guide": "setup_guide",
+        "developer_documentation": "developer_documentation",
+        "test_documentation": "test_documentation",
+        "user_documentation": "user_documentation",
+        "legal_compliance": "legal_compliance",
+        "support_playbook": "support_playbook",
+        "wbs_agent": "wbs_agent",
+    }
+    
+    # If input looks like agent_type, convert to doc_type
+    if doc_or_agent_type in agent_to_doc_type:
+        doc_type = agent_to_doc_type[doc_or_agent_type]
+    elif doc_or_agent_type not in doc_type_to_agent_type:
+        # Try direct lookup - might already be doc_type
+        doc_type = doc_or_agent_type
+    
+    if status.get("status") in ["complete", "in_progress", "phase1_complete_awaiting_approval"]:
+        results = status.get("results", {})
+        files = results.get("files", {})
+        
+        if doc_type in files:
+            file_path = files[doc_type]
+            # Handle case where file_path might be a dict
+            if isinstance(file_path, dict):
+                file_path = file_path.get("path") or file_path.get("file_path") or file_path.get("value")
+            
+            if isinstance(file_path, str):
+                path_obj = Path(file_path)
+                if path_obj.exists():
+                    try:
+                        content = path_obj.read_text(encoding='utf-8')
+                        return Response(content=content, media_type='text/markdown')
+                    except Exception as e:
+                        logger.error(f"Error reading file {path_obj}: {e}")
+                        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+    
+    raise HTTPException(status_code=404, detail=f"Document {doc_or_agent_type} not found for project {project_id}")
 
 
 @app.get("/api/download-all/{project_id}")
@@ -1466,6 +1596,70 @@ async def approve_document(project_id: str, agent_type: str, request: Optional[D
         notes = request.notes if request else None
         context_manager.approve_document(project_id, agent_type_enum, notes=notes)
         
+        # Get the approved document content and save final version to docs folder
+        document_output = context_manager.get_agent_output(project_id, agent_type_enum)
+        if document_output and document_output.content:
+            # Map agent_type to folder and filename
+            from src.coordination.coordinator import AGENT_TYPE_TO_FOLDER
+            folder = AGENT_TYPE_TO_FOLDER.get(agent_type_enum, agent_type_enum.value)
+            
+            # Get the final filename (without version suffix)
+            from src.coordination.workflow_dag import WORKFLOW_TASKS_CONFIG
+            task_config = None
+            for task in WORKFLOW_TASKS_CONFIG.values():
+                if task.agent_type == agent_type_enum:
+                    task_config = task
+                    break
+            
+            if task_config:
+                final_filename = task_config.output_filename
+            else:
+                # Fallback: use agent_type to generate filename
+                final_filename = f"{agent_type_enum.value.replace('_', '_')}.md"
+            
+            # Save final approved version to docs folder (overwrite any existing version files)
+            from pathlib import Path
+            from src.utils.file_manager import FileManager
+            
+            # Create FileManager with the correct folder
+            file_manager = FileManager(base_dir=f"docs/{folder}")
+            final_file_path = file_manager.write_file(final_filename, document_output.content)
+            
+            logger.info(f"✅ Final approved version saved to: {final_file_path}")
+            
+            # Also ensure the file is saved in the root docs folder if it's a Phase 1 document
+            # This ensures the final version is visible in docs/ folder structure
+            if folder and folder != agent_type_enum.value:
+                # Save a copy to the root docs folder for easy access
+                root_file_manager = FileManager(base_dir="docs")
+                root_file_path = root_file_manager.write_file(final_filename, document_output.content)
+                logger.info(f"✅ Final approved version also saved to root: {root_file_path}")
+            
+            # Update the file_path of the approved document version (don't create new version)
+            # Find the latest approved version (which was just approved above)
+            # Use the lock to ensure thread safety
+            with context_manager._lock:
+                cursor = context_manager.connection.cursor()
+                cursor.execute("""
+                    SELECT version FROM agent_outputs 
+                    WHERE project_id = ? AND agent_type = ? AND approved = 1
+                    ORDER BY version DESC LIMIT 1
+                """, (project_id, agent_type_enum.value))
+                approved_row = cursor.fetchone()
+                
+                if approved_row:
+                    approved_version = approved_row["version"]
+                    # Update the file_path of the approved version
+                    cursor.execute("""
+                        UPDATE agent_outputs 
+                        SET file_path = ?
+                        WHERE project_id = ? AND agent_type = ? AND version = ? AND approved = 1
+                    """, (final_file_path, project_id, agent_type_enum.value, approved_version))
+                    context_manager.connection.commit()
+                    logger.info(f"✅ Updated file_path for approved document version {approved_version}: {final_file_path}")
+                else:
+                    logger.warning(f"⚠️  Could not find approved version to update file_path for {agent_type_enum.value}")
+        
         # Send WebSocket update
         await websocket_manager.send_progress(project_id, {
             "type": "document_approved",
@@ -1531,6 +1725,79 @@ async def reject_document(project_id: str, agent_type: str, request: Optional[Do
         raise
     except Exception as e:
         logger.error(f"Error rejecting document {agent_type} for project {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/phase1-documents-list/{project_id}")
+async def get_phase1_documents_list(project_id: str):
+    """
+    Get list of all Phase 1 documents that have been generated (for review history)
+    
+    Returns a list of all Phase 1 documents with their status (approved, pending, etc.)
+    """
+    try:
+        status = context_manager.get_project_status(project_id)
+        if not status:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Phase 1 agent types in order
+        phase1_agent_types = [
+            AgentType.REQUIREMENTS_ANALYST,
+            AgentType.PROJECT_CHARTER,
+            AgentType.USER_STORIES,
+            AgentType.BUSINESS_MODEL,
+            AgentType.MARKETING_PLAN,
+            AgentType.PM_DOCUMENTATION,
+            AgentType.STAKEHOLDER_COMMUNICATION,
+            AgentType.WBS_AGENT,
+        ]
+        
+        documents = []
+        for agent_type in phase1_agent_types:
+            try:
+                document_output = context_manager.get_agent_output(project_id, agent_type)
+                if document_output:
+                    # Check approval status - ensure we get the latest status
+                    approval_status = context_manager.is_document_approved(project_id, agent_type)
+                    approval_status_str = "approved" if approval_status is True else ("rejected" if approval_status is False else "pending")
+                    version = context_manager.get_document_version(project_id, agent_type)
+                    
+                    # Debug logging
+                    logger.debug(f"Document {agent_type.value}: status={approval_status_str}, approval_status={approval_status}, version={version}")
+                    
+                    # Map agent_type to display name
+                    agent_type_to_name = {
+                        AgentType.REQUIREMENTS_ANALYST: "Requirements",
+                        AgentType.PROJECT_CHARTER: "Project Charter",
+                        AgentType.USER_STORIES: "User Stories",
+                        AgentType.BUSINESS_MODEL: "Business Model",
+                        AgentType.MARKETING_PLAN: "Marketing Plan",
+                        AgentType.PM_DOCUMENTATION: "PM Documentation",
+                        AgentType.STAKEHOLDER_COMMUNICATION: "Stakeholder Communication",
+                        AgentType.WBS_AGENT: "Work Breakdown Structure",
+                    }
+                    
+                    documents.append({
+                        "agent_type": agent_type.value,
+                        "display_name": agent_type_to_name.get(agent_type, agent_type.value),
+                        "version": version,
+                        "status": approval_status_str,
+                        "quality_score": document_output.quality_score,
+                        "generated_at": document_output.generated_at.isoformat() if document_output.generated_at else None,
+                        "has_content": bool(document_output.content)
+                    })
+            except Exception as e:
+                logger.debug(f"Error getting document {agent_type.value} for project {project_id}: {e}")
+                continue
+        
+        return {
+            "project_id": project_id,
+            "documents": documents
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting Phase 1 documents list for project {project_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1600,7 +1867,18 @@ async def download_document(project_id: str, doc_type: str):
     if doc_type not in files:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    file_path = Path(files[doc_type])
+    file_path_value = files[doc_type]
+    
+    # Handle case where file_path might be a dict (from old data format)
+    if isinstance(file_path_value, dict):
+        file_path_value = file_path_value.get("path") or file_path_value.get("file_path") or file_path_value.get("value")
+        if not file_path_value or not isinstance(file_path_value, str):
+            raise HTTPException(status_code=404, detail="Invalid file path format")
+    
+    if not isinstance(file_path_value, str):
+        raise HTTPException(status_code=404, detail="Invalid file path type")
+    
+    file_path = Path(file_path_value)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     
@@ -1637,5 +1915,22 @@ async def download_document(project_id: str, doc_type: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import logging
+    
+    # Disable uvicorn WebSocket connection logs (connection open/closed messages)
+    uvicorn_logger = logging.getLogger("uvicorn")
+    uvicorn_logger.setLevel(logging.WARNING)
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.setLevel(logging.WARNING)
+    # Also disable WebSocket-specific logs
+    websocket_logger = logging.getLogger("uvicorn.protocols.websockets")
+    websocket_logger.setLevel(logging.WARNING)
+
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        log_level="warning",  # Set to WARNING to suppress INFO level WebSocket logs
+        access_log=False,  # Disable HTTP access logs to reduce noise
+    )
 
