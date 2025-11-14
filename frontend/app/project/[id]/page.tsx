@@ -42,10 +42,11 @@ export default function ProjectStatusPage() {
     const connectWebSocket = () => {
       try {
         const wsUrl = getWebSocketUrl(projectId);
+        console.log('Attempting WebSocket connection to:', wsUrl);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          console.log('WebSocket connected');
+          console.log('WebSocket connected successfully');
           setWsConnected(true);
           if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
@@ -70,17 +71,28 @@ export default function ProjectStatusPage() {
         };
 
         ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          // WebSocket errors are often empty objects, log what we can
+          console.warn('WebSocket connection error (falling back to polling)');
+          if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            console.warn('WebSocket closed unexpectedly');
+          }
           setWsConnected(false);
+          // Don't show error to user - polling will handle updates gracefully
         };
 
-        ws.onclose = () => {
-          console.log('WebSocket closed');
+        ws.onclose = (event) => {
+          console.log('WebSocket closed', event.code, event.reason || '');
           setWsConnected(false);
-          // Attempt to reconnect after 3 seconds
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connectWebSocket();
-          }, 3000);
+          
+          // Only attempt to reconnect if it wasn't a normal closure
+          // and we haven't already scheduled a reconnect
+          if (event.code !== 1000 && !reconnectTimeoutRef.current) {
+            console.log('Scheduling WebSocket reconnect in 3 seconds...');
+            reconnectTimeoutRef.current = setTimeout(() => {
+              reconnectTimeoutRef.current = null;
+              connectWebSocket();
+            }, 3000);
+          }
         };
 
         wsRef.current = ws;
