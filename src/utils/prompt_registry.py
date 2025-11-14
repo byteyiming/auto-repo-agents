@@ -1,0 +1,146 @@
+"""Registry mapping document IDs to specialized prompt functions."""
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, Optional
+
+from prompts import system_prompts
+
+
+def _extract_requirements_summary(
+    user_idea: str,
+    dependency_documents: Dict[str, Dict[str, str]],
+) -> Dict[str, Any]:
+    """Extract requirements summary from dependencies or build from user_idea."""
+    summary: Dict[str, Any] = {"user_idea": user_idea}
+
+    # Try to get requirements document
+    req_doc = dependency_documents.get("requirements")
+    if req_doc:
+        content = req_doc.get("content", "")
+        summary["requirements_document"] = content
+        # Try to parse structured fields if available
+        # For now, just include the full document
+    else:
+        summary["requirements_document"] = ""
+
+    # Extract other common dependencies
+    project_charter = dependency_documents.get("project_charter")
+    if project_charter:
+        summary["project_charter_summary"] = project_charter.get("content", "")
+
+    technical_doc = dependency_documents.get("technical_documentation") or dependency_documents.get("tad")
+    if technical_doc:
+        summary["technical_summary"] = technical_doc.get("content", "")
+
+    api_doc = dependency_documents.get("api_documentation")
+    if api_doc:
+        summary["api_summary"] = api_doc.get("content", "")
+
+    pm_doc = dependency_documents.get("pm_documentation") or dependency_documents.get("pm_management_doc")
+    if pm_doc:
+        summary["pm_summary"] = pm_doc.get("content", "")
+
+    user_stories_doc = dependency_documents.get("user_stories")
+    if user_stories_doc:
+        summary["user_stories"] = user_stories_doc.get("content", "")
+
+    business_model_doc = dependency_documents.get("business_model")
+    if business_model_doc:
+        summary["business_model"] = business_model_doc.get("content", "")
+
+    return summary
+
+
+def _get_prompt_for_document(
+    document_id: str,
+    user_idea: str,
+    dependency_documents: Dict[str, Dict[str, str]],
+) -> Optional[str]:
+    """Get specialized prompt for a document ID, or None if not available."""
+    req_summary = _extract_requirements_summary(user_idea, dependency_documents)
+
+    # Map document IDs to prompt functions
+    prompt_map: Dict[str, Callable] = {
+        "requirements": lambda: system_prompts.get_requirements_prompt(user_idea),
+        "project_charter": lambda: system_prompts.get_project_charter_prompt(req_summary),
+        "user_stories": lambda: system_prompts.get_user_stories_prompt(
+            req_summary, req_summary.get("project_charter_summary")
+        ),
+        "pm_documentation": lambda: system_prompts.get_pm_prompt(
+            req_summary, req_summary.get("project_charter_summary")
+        ),
+        "pm_management_doc": lambda: system_prompts.get_pm_prompt(
+            req_summary, req_summary.get("project_charter_summary")
+        ),
+        "wbs": lambda: system_prompts.get_wbs_prompt(
+            req_summary, req_summary.get("project_charter_summary"), req_summary.get("pm_summary")
+        ),
+        "technical_documentation": lambda: system_prompts.get_technical_prompt(
+            req_summary, req_summary.get("project_charter_summary"), req_summary.get("user_stories")
+        ),
+        "tad": lambda: system_prompts.get_technical_prompt(
+            req_summary, req_summary.get("project_charter_summary"), req_summary.get("user_stories")
+        ),
+        "api_documentation": lambda: system_prompts.get_api_prompt(
+            req_summary, req_summary.get("technical_summary")
+        ),
+        "database_schema": lambda: system_prompts.get_database_schema_prompt(
+            req_summary, req_summary.get("technical_summary")
+        ),
+        "developer_guide": lambda: system_prompts.get_developer_prompt(
+            req_summary, req_summary.get("technical_summary"), req_summary.get("api_summary")
+        ),
+        "developer_documentation": lambda: system_prompts.get_developer_prompt(
+            req_summary, req_summary.get("technical_summary"), req_summary.get("api_summary")
+        ),
+        "setup_guide": lambda: system_prompts.get_setup_guide_prompt(
+            req_summary, req_summary.get("technical_summary"), req_summary.get("api_summary")
+        ),
+        "user_documentation": lambda: system_prompts.get_user_prompt(req_summary),
+        "test_documentation": lambda: system_prompts.get_test_prompt(
+            req_summary, req_summary.get("technical_summary"), req_summary.get("api_summary")
+        ),
+        "test_plan": lambda: system_prompts.get_test_prompt(
+            req_summary, req_summary.get("technical_summary"), req_summary.get("api_summary")
+        ),
+        "stakeholder_communication": lambda: system_prompts.get_stakeholder_prompt(
+            req_summary, req_summary.get("pm_summary")
+        ),
+        "stakeholders_doc": lambda: system_prompts.get_stakeholder_prompt(
+            req_summary, req_summary.get("pm_summary")
+        ),
+        "business_model": lambda: system_prompts.get_business_model_prompt(
+            req_summary, req_summary.get("project_charter_summary")
+        ),
+        "marketing_plan": lambda: system_prompts.get_marketing_plan_prompt(
+            req_summary,
+            req_summary.get("project_charter_summary"),
+            req_summary.get("business_model"),
+        ),
+        "support_playbook": lambda: system_prompts.get_support_playbook_prompt(req_summary),
+        "legal_compliance": lambda: system_prompts.get_legal_compliance_prompt(req_summary),
+    }
+
+    prompt_fn = prompt_map.get(document_id)
+    if not prompt_fn:
+        return None
+
+    try:
+        return prompt_fn()
+    except Exception as exc:
+        # Log error but don't fail - fall back to generic prompt
+        from src.utils.logger import get_logger
+
+        logger = get_logger(__name__)
+        logger.warning("Failed to generate specialized prompt for %s: %s", document_id, exc)
+        return None
+
+
+def get_prompt_for_document(
+    document_id: str,
+    user_idea: str,
+    dependency_documents: Dict[str, Dict[str, str]],
+) -> Optional[str]:
+    """Public interface to get specialized prompt for a document."""
+    return _get_prompt_for_document(document_id, user_idea, dependency_documents)
+
