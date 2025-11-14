@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { DocumentTemplate, getDocumentTemplates } from '../lib/api';
-import { useI18n } from '../lib/i18n';
-import { rankDocuments, filterDocumentsByView, organizeByLevel, DocumentLevel, LEVEL_NAMES, LEVEL_ICONS, type ViewMode } from '../lib/documentRanking';
+import { useI18n, getDocumentName, getLevelName } from '../lib/i18n';
+import { rankDocuments, filterDocumentsByView, organizeByLevel, DocumentLevel, LEVEL_ICONS, type ViewMode } from '../lib/documentRanking';
 
 interface DocumentSelectorProps {
   selectedDocuments: string[];
@@ -19,7 +19,7 @@ export default function DocumentSelector({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [expandedLevels, setExpandedLevels] = useState<Set<DocumentLevel>>(new Set());
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   useEffect(() => {
     async function loadTemplates() {
@@ -78,7 +78,7 @@ export default function DocumentSelector({
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-medium">{doc.name}</span>
+                <span className="font-medium">{getDocumentName(doc.id) || doc.name}</span>
                 {doc.priority && (
                   <span className={`rounded px-2 py-0.5 text-xs font-medium ${
                     doc.priority.includes('高') || doc.priority.includes('High')
@@ -102,7 +102,7 @@ export default function DocumentSelector({
                   {doc.dependencies
                     .map((depId) => {
                       const depDoc = templates.find((t) => t.id === depId);
-                      return depDoc?.name || depId;
+                      return getDocumentName(depId) || depDoc?.name || depId;
                     })
                     .join(', ')}
                 </div>
@@ -131,7 +131,7 @@ export default function DocumentSelector({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-h-0">
       {/* View Mode Selector */}
       <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3">
         <span className="text-sm font-medium text-gray-700">{t('documents.title')}:</span>
@@ -188,7 +188,7 @@ export default function DocumentSelector({
             >
               <h4 className="flex items-center gap-2 font-semibold text-purple-900">
                 <span className="text-xl">{LEVEL_ICONS[DocumentLevel.STRATEGIC]}</span>
-                <span>{LEVEL_NAMES[DocumentLevel.STRATEGIC]}</span>
+                <span>{getLevelName(DocumentLevel.STRATEGIC)}</span>
                 <span className="ml-auto text-sm font-normal text-purple-700">
                   ({organizedDocs.strategic.length} documents)
                 </span>
@@ -214,7 +214,7 @@ export default function DocumentSelector({
             >
               <h4 className="flex items-center gap-2 font-semibold text-blue-900">
                 <span className="text-xl">{LEVEL_ICONS[DocumentLevel.PRODUCT]}</span>
-                <span>{LEVEL_NAMES[DocumentLevel.PRODUCT]}</span>
+                <span>{getLevelName(DocumentLevel.PRODUCT)}</span>
                 <span className="ml-auto text-sm font-normal text-blue-700">
                   ({organizedDocs.product.length} documents)
                 </span>
@@ -240,7 +240,7 @@ export default function DocumentSelector({
             >
               <h4 className="flex items-center gap-2 font-semibold text-green-900">
                 <span className="text-xl">{LEVEL_ICONS[DocumentLevel.DEVELOPER]}</span>
-                <span>{LEVEL_NAMES[DocumentLevel.DEVELOPER]}</span>
+                <span>{getLevelName(DocumentLevel.DEVELOPER)}</span>
                 <span className="ml-auto text-sm font-normal text-green-700">
                   ({organizedDocs.developer.length} documents)
                 </span>
@@ -266,7 +266,7 @@ export default function DocumentSelector({
             >
               <h4 className="flex items-center gap-2 font-semibold text-yellow-900">
                 <span className="text-xl">{LEVEL_ICONS[DocumentLevel.USER]}</span>
-                <span>{LEVEL_NAMES[DocumentLevel.USER]}</span>
+                <span>{getLevelName(DocumentLevel.USER)}</span>
                 <span className="ml-auto text-sm font-normal text-yellow-700">
                   ({organizedDocs.user.length} documents)
                 </span>
@@ -292,7 +292,7 @@ export default function DocumentSelector({
             >
               <h4 className="flex items-center gap-2 font-semibold text-orange-900">
                 <span className="text-xl">{LEVEL_ICONS[DocumentLevel.OPERATIONS]}</span>
-                <span>{LEVEL_NAMES[DocumentLevel.OPERATIONS]}</span>
+                <span>{getLevelName(DocumentLevel.OPERATIONS)}</span>
                 <span className="ml-auto text-sm font-normal text-orange-700">
                   ({organizedDocs.operations.length} documents)
                 </span>
@@ -318,7 +318,7 @@ export default function DocumentSelector({
             >
               <h4 className="flex items-center gap-2 font-semibold text-gray-900">
                 <span className="text-xl">{LEVEL_ICONS[DocumentLevel.CROSS_LEVEL]}</span>
-                <span>{LEVEL_NAMES[DocumentLevel.CROSS_LEVEL]}</span>
+                <span>{getLevelName(DocumentLevel.CROSS_LEVEL)}</span>
                 <span className="ml-auto text-sm font-normal text-gray-700">
                   ({organizedDocs.crossLevel.length} documents)
                 </span>
