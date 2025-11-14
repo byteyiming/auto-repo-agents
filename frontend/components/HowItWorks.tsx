@@ -40,7 +40,7 @@ export default function HowItWorks() {
     <div className="bg-white py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl" suppressHydrationWarning>
             {t('howItWorks.title')}
           </h2>
         </div>
@@ -64,10 +64,10 @@ export default function HowItWorks() {
               </div>
               
               {/* Content */}
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="text-xl font-semibold text-gray-900" suppressHydrationWarning>
                 {step.title}
               </h3>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-2 text-gray-600" suppressHydrationWarning>
                 {step.description}
               </p>
               
