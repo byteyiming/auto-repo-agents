@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DocumentSelector from '@/components/DocumentSelector';
+import HeroSection from '@/components/HeroSection';
+import HowItWorks from '@/components/HowItWorks';
 import { createProject } from '@/lib/api';
-import { useI18n, languages, languageNames, type Language } from '@/lib/i18n';
+import { useI18n } from '@/lib/i18n';
 
 export default function Home() {
   const router = useRouter();
-  const { t, language, setLanguage } = useI18n();
+  const { t } = useI18n();
   const [userIdea, setUserIdea] = useState('');
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,35 +74,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <HeroSection />
+
+      {/* Main Form Section */}
       <div className="mx-auto max-w-4xl px-4 py-12">
-        {/* Language Selector - Top Right */}
-        <div className="mb-4 flex justify-end">
-          <div className="flex gap-2 rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
-            {languages.map((lang) => (
-              <button
-                key={lang}
-                onClick={() => setLanguage(lang)}
-                className={`rounded px-3 py-1 text-sm transition-colors ${
-                  language === lang
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {languageNames[lang]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900">
-            {t('app.title')}
-          </h1>
-          <p className="mt-2 text-lg text-gray-600">
-            {t('app.subtitle')}
-          </p>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Project Idea Input */}
           <div className="rounded-lg bg-white p-6 shadow-sm">
@@ -151,6 +129,9 @@ export default function Home() {
           </div>
         </form>
       </div>
+
+      {/* How It Works Section */}
+      <HowItWorks />
     </div>
   );
 }
