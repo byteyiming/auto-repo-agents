@@ -9,13 +9,13 @@ export default function HeroSection() {
     <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl md:text-7xl">
+          <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl md:text-7xl" suppressHydrationWarning>
             {t('hero.title')}
           </h1>
-          <p className="mt-6 text-xl leading-8 text-gray-600 sm:text-2xl">
+          <p className="mt-6 text-xl leading-8 text-gray-600 sm:text-2xl" suppressHydrationWarning>
             {t('hero.subtitle')}
           </p>
-          <p className="mt-4 text-lg text-gray-500">
+          <p className="mt-4 text-lg text-gray-500" suppressHydrationWarning>
             {t('hero.description')}
           </p>
           
@@ -27,8 +27,8 @@ export default function HeroSection() {
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-4xl shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl sm:h-24 sm:w-24 animate-pulse" style={{ animationDuration: '2s' }}>
                   💡
                 </div>
-                <span className="mt-3 text-sm font-medium text-gray-700 sm:text-base">
-                  Idea
+                <span className="mt-3 text-sm font-medium text-gray-700 sm:text-base" suppressHydrationWarning>
+                  {t('hero.flow.idea')}
                 </span>
               </div>
               
@@ -73,8 +73,8 @@ export default function HeroSection() {
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-purple-100 text-4xl shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl sm:h-24 sm:w-24 animate-pulse" style={{ animationDuration: '2s', animationDelay: '0.3s' }}>
                   🤖
                 </div>
-                <span className="mt-3 text-sm font-medium text-gray-700 sm:text-base">
-                  Customized Agents
+                <span className="mt-3 text-sm font-medium text-gray-700 sm:text-base" suppressHydrationWarning>
+                  {t('hero.flow.agents')}
                 </span>
               </div>
               
@@ -119,8 +119,8 @@ export default function HeroSection() {
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-4xl shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl sm:h-24 sm:w-24 animate-pulse" style={{ animationDuration: '2s', animationDelay: '0.6s' }}>
                   📚
                 </div>
-                <span className="mt-3 text-sm font-medium text-gray-700 sm:text-base">
-                  Documents
+                <span className="mt-3 text-sm font-medium text-gray-700 sm:text-base" suppressHydrationWarning>
+                  {t('hero.flow.documents')}
                 </span>
               </div>
             </div>
