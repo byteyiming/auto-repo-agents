@@ -1,0 +1,1187 @@
+{
+  "generated_at": "2025-11-13T14:39:39.934133+00:00",
+  "source": "/Users/yiming/dev_code/git/OmniDoc/JobTrackrAI_Document_Management_Template_v3.csv",
+  "documents": [
+    {
+      "id": "interaction_flows",
+      "name": "Interaction / Flow Diagrams",
+      "category": "产品设计 / 功能",
+      "description": "用户流程、系统交互",
+      "prompt_key": "interaction_flows_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "UX/UI Designer / Dev Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "ui_style_guide",
+      "name": "UI Style Guide",
+      "category": "产品设计 / 功能",
+      "description": "颜色、字体、组件规范",
+      "prompt_key": "ui_style_guide_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "UX/UI Designer",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "fsd",
+      "name": "FSD (Functional Spec Doc)",
+      "category": "产品设计 / 功能",
+      "description": "功能实现细节",
+      "prompt_key": "fsd_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager / Dev Lead",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "onboarding_flow",
+      "name": "Onboarding Flow",
+      "category": "产品设计 / 功能",
+      "description": "用户注册、初次使用流程",
+      "prompt_key": "onboarding_flow_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "UX/UI Designer / PM",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "prd",
+      "name": "PRD (Product Requirements Doc)",
+      "category": "产品设计 / 功能",
+      "description": "产品功能详细说明",
+      "prompt_key": "prd_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "tad",
+      "name": "TAD (Technical Architecture Doc)",
+      "category": "产品设计 / 功能",
+      "description": "技术架构设计",
+      "prompt_key": "tad_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Tech Lead / Dev Lead",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "ui_mockups",
+      "name": "UI Mockups / Mockups Docs",
+      "category": "产品设计 / 功能",
+      "description": "页面设计和布局",
+      "prompt_key": "ui_mockups_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "UX/UI Designer",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "accessibility_plan",
+      "name": "Accessibility Plan / ADA Compliance",
+      "category": "安全 / 合规",
+      "description": "无障碍功能设计",
+      "prompt_key": "accessibility_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "UX/UI Designer / PM",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "eol_policy",
+      "name": "End-of-Life (EOL) Policy",
+      "category": "安全 / 合规",
+      "description": "产品或功能退役策略",
+      "prompt_key": "eol_policy_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "PM / Dev Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "localization_plan",
+      "name": "Localization / Internationalization Plan",
+      "category": "安全 / 合规",
+      "description": "多语言支持策略",
+      "prompt_key": "localization_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "UX/UI Designer / Dev Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "data_retention_policy",
+      "name": "Data Retention & Archiving Policy",
+      "category": "安全 / 合规",
+      "description": "数据保留与归档",
+      "prompt_key": "data_retention_policy_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "PM / DevOps",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "incident_response_plan",
+      "name": "Incident Response Plan",
+      "category": "安全 / 合规",
+      "description": "安全/系统事件响应",
+      "prompt_key": "incident_response_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Security Lead / DevOps",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "terms_of_service",
+      "name": "Legal / Terms of Service (ToS)",
+      "category": "安全 / 合规",
+      "description": "用户协议与法律条款",
+      "prompt_key": "terms_of_service_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Legal",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "privacy_policy",
+      "name": "Privacy Policy / GDPR Compliance",
+      "category": "安全 / 合规",
+      "description": "用户隐私及法规合规",
+      "prompt_key": "privacy_policy_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Legal / PM",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "security_plan",
+      "name": "Security Plan",
+      "category": "安全 / 合规",
+      "description": "系统安全策略",
+      "prompt_key": "SECURITY_PLAN_PROMPT",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Security Lead / DevOps",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "api_versioning_policy",
+      "name": "API Versioning & Deprecation Policy",
+      "category": "技术 / 开发",
+      "description": "API升级与退役策略",
+      "prompt_key": "api_versioning_policy_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Backend Dev / Tech Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "cicd_doc",
+      "name": "CI/CD Pipeline Doc",
+      "category": "技术 / 开发",
+      "description": "持续集成/部署流程",
+      "prompt_key": "cicd_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "DevOps",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "configuration_management_plan",
+      "name": "Configuration Management Plan",
+      "category": "技术 / 开发",
+      "description": "系统配置与版本管理",
+      "prompt_key": "configuration_management_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "DevOps / Tech Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "deployment_plan",
+      "name": "Deployment Plan",
+      "category": "技术 / 开发",
+      "description": "上线与发布计划",
+      "prompt_key": "deployment_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "DevOps / Dev Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "scalability_plan",
+      "name": "Scalability Plan",
+      "category": "技术 / 开发",
+      "description": "系统扩展方案",
+      "prompt_key": "scalability_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Tech Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "technical_debt_log",
+      "name": "Technical Debt Log / Refactoring Plan",
+      "category": "技术 / 开发",
+      "description": "技术欠债记录",
+      "prompt_key": "technical_debt_log_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Dev Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "api_documentation",
+      "name": "API Documentation",
+      "category": "技术 / 开发",
+      "description": "API接口说明",
+      "prompt_key": "API_DOCUMENTATION_PROMPT",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Backend Dev",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "database_schema",
+      "name": "Database Schema",
+      "category": "技术 / 开发",
+      "description": "数据库设计",
+      "prompt_key": "DATABASE_SCHEMA_PROMPT",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Backend Dev / DB Admin",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "developer_guide",
+      "name": "Developer Guide / README",
+      "category": "技术 / 开发",
+      "description": "开发指南和依赖说明",
+      "prompt_key": "developer_guide_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Dev Lead",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "monitoring_logging_plan",
+      "name": "Monitoring & Logging Plan",
+      "category": "技术 / 开发",
+      "description": "系统监控和日志策略",
+      "prompt_key": "monitoring_logging_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "DevOps / QA",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "ab_testing_docs",
+      "name": "Experimentation / A/B Testing Docs",
+      "category": "测试 / QA / 支持",
+      "description": "功能优化实验设计",
+      "prompt_key": "ab_testing_docs_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Product Manager / Data Analyst",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "knowledge_base",
+      "name": "Knowledge Base",
+      "category": "测试 / QA / 支持",
+      "description": "常见问题和帮助文档",
+      "prompt_key": "knowledge_base_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Support Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "support_training_doc",
+      "name": "Support Team Training Document",
+      "category": "测试 / QA / 支持",
+      "description": "客服培训材料",
+      "prompt_key": "support_training_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Support Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "support_playbook",
+      "name": "Support Playbook",
+      "category": "测试 / QA / 支持",
+      "description": "客服处理流程",
+      "prompt_key": "support_playbook_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Support Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "test_plan",
+      "name": "Test Plan Document",
+      "category": "测试 / QA / 支持",
+      "description": "测试用例、方法和流程",
+      "prompt_key": "TEST_PLAN_PROMPT",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "QA",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "user_feedback_plan",
+      "name": "User Feedback Plan",
+      "category": "测试 / QA / 支持",
+      "description": "用户反馈收集与分析",
+      "prompt_key": "user_feedback_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager / UX",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "user_support_doc",
+      "name": "User Support Document",
+      "category": "测试 / QA / 支持",
+      "description": "用户支持指南",
+      "prompt_key": "user_support_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Support Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "gtm_strategy",
+      "name": "Go-To-Market (GTM) Strategy",
+      "category": "用户 / 产品分析",
+      "description": "上市推广策略",
+      "prompt_key": "gtm_strategy_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Product Manager / Marketing",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "user_analytics",
+      "name": "User Analytics / Behavior Tracking Doc",
+      "category": "用户 / 产品分析",
+      "description": "用户行为数据分析方法",
+      "prompt_key": "user_analytics_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Data Analyst / PM",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "dashboard_metrics",
+      "name": "Dashboard Metrics Specification",
+      "category": "用户 / 产品分析",
+      "description": "仪表盘数据指标",
+      "prompt_key": "dashboard_metrics_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "UX/UI Designer / Data Analyst",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "kpi_metrics_doc",
+      "name": "KPIs / Metrics Document",
+      "category": "用户 / 产品分析",
+      "description": "产品指标和分析方法",
+      "prompt_key": "kpi_metrics_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager / Data Analyst",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "release_notes",
+      "name": "Release Notes / Version History",
+      "category": "用户 / 产品分析",
+      "description": "版本功能更新与修复记录",
+      "prompt_key": "release_notes_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager / Dev Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "third_party_integrations",
+      "name": "Third-Party Integration Documentation",
+      "category": "用户 / 产品分析",
+      "description": "第三方服务集成说明",
+      "prompt_key": "third_party_integrations_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Dev Lead / Backend Dev",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "bcp",
+      "name": "Business Continuity Plan (BCP)",
+      "category": "运维 / 高级管理",
+      "description": "灾难或停机业务连续性",
+      "prompt_key": "bcp_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "PM / DevOps",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "cloud_infrastructure_doc",
+      "name": "Cloud Infrastructure / Cost Management Doc",
+      "category": "运维 / 高级管理",
+      "description": "云资源架构及成本优化",
+      "prompt_key": "cloud_infrastructure_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "DevOps / Tech Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "performance_optimization_doc",
+      "name": "Performance Tuning & Optimization Doc",
+      "category": "运维 / 高级管理",
+      "description": "性能优化方案",
+      "prompt_key": "performance_optimization_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "DevOps / Tech Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "sla",
+      "name": "SLA / Service Level Agreement",
+      "category": "运维 / 高级管理",
+      "description": "可用性和支持承诺",
+      "prompt_key": "sla_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "PM / Legal",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "vendor_management_docs",
+      "name": "Vendor / Supplier Management Docs",
+      "category": "运维 / 高级管理",
+      "description": "第三方服务与合同管理",
+      "prompt_key": "vendor_management_docs_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "PM / Legal",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "backup_recovery_plan",
+      "name": "Backup & Recovery Plan",
+      "category": "运维 / 高级管理",
+      "description": "数据备份与恢复流程",
+      "prompt_key": "backup_recovery_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "DevOps",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "maintenance_plan",
+      "name": "Maintenance Plan",
+      "category": "运维 / 高级管理",
+      "description": "系统维护流程",
+      "prompt_key": "maintenance_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "DevOps",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "change_management_plan",
+      "name": "Change Management Plan",
+      "category": "项目管理 / 规划",
+      "description": "功能或架构变更流程",
+      "prompt_key": "change_management_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Product Manager / Dev Lead",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "risk_management_plan",
+      "name": "Risk Management / Mitigation Plan",
+      "category": "项目管理 / 规划",
+      "description": "风险分析与缓解措施",
+      "prompt_key": "risk_management_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "PM / QA / Dev Lead",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "stakeholders_doc",
+      "name": "Stakeholders Document",
+      "category": "项目管理 / 规划",
+      "description": "利益相关方列表及角色",
+      "prompt_key": "stakeholders_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Product Manager",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "business_model",
+      "name": "Business Model",
+      "category": "项目管理 / 规划",
+      "description": "商业模式、盈利策略",
+      "prompt_key": "BUSINESS_MODEL_PROMPT",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager / CEO",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "feature_roadmap",
+      "name": "Feature Roadmap",
+      "category": "项目管理 / 规划",
+      "description": "功能迭代计划",
+      "prompt_key": "feature_roadmap_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "pm_management_doc",
+      "name": "PM Management Doc",
+      "category": "项目管理 / 规划",
+      "description": "项目管理流程、职责分工",
+      "prompt_key": "pm_management_doc_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager",
+      "status": "未开始",
+      "audience": "团队",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "project_charter",
+      "name": "Project Charter",
+      "category": "项目管理 / 规划",
+      "description": "产品目标、范围、里程碑",
+      "prompt_key": "PROJECT_CHARTER_PROMPT",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "requirements",
+      "name": "Requirements Document",
+      "category": "项目管理 / 规划",
+      "description": "系统功能和需求说明",
+      "prompt_key": "REQUIREMENTS_ANALYST_PROMPT",
+      "agent_class": "special",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "Product Manager / BA",
+      "status": "未开始",
+      "audience": "个人",
+      "stage": {
+        "label": "MVP",
+        "notes": "MVP 阶段必备核心文档"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": "",
+      "special_key": "requirements_analyst"
+    },
+    {
+      "id": "wbs",
+      "name": "Work Breakdown Structure (WBS)",
+      "category": "项目管理 / 规划",
+      "description": "任务拆分、进度计划",
+      "prompt_key": "wbs_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "高",
+      "owner": "PM / Product Manager",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "data_governance_policy",
+      "name": "Data Governance / Data Quality Policy",
+      "category": "高级 / 可选 / 补充",
+      "description": "数据标准化、准确性、完整性",
+      "prompt_key": "data_governance_policy_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Data Analyst / PM",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "feature_flag_docs",
+      "name": "Experimentation / Feature Flag Docs",
+      "category": "高级 / 可选 / 补充",
+      "description": "功能实验和开关管理",
+      "prompt_key": "feature_flag_docs_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Dev Lead / PM",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "innovation_plan",
+      "name": "Innovation / R&D Plan",
+      "category": "高级 / 可选 / 补充",
+      "description": "新功能或技术探索路线",
+      "prompt_key": "innovation_plan_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Product Manager / Tech Lead",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "market_research",
+      "name": "Market Research & Competitive Analysis",
+      "category": "高级 / 可选 / 补充",
+      "description": "市场和竞品分析",
+      "prompt_key": "market_research_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Product Manager / Marketing",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    },
+    {
+      "id": "technical_audit",
+      "name": "Technical Audit / Compliance Audit Reports",
+      "category": "高级 / 可选 / 补充",
+      "description": "技术与合规审计",
+      "prompt_key": "technical_audit_prompt",
+      "agent_class": "generic",
+      "dependencies": [],
+      "priority": "中",
+      "owner": "Security Lead / Legal",
+      "status": "未开始",
+      "audience": "混合",
+      "stage": {
+        "label": "产品成熟 / 后续迭代",
+        "notes": "可在 MVP 后阶段完善"
+      },
+      "must_have": "",
+      "usage_frequency": "",
+      "notes": ""
+    }
+  ]
+}
