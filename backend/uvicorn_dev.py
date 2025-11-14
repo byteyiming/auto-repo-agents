@@ -10,6 +10,10 @@ import os
 from contextlib import suppress
 
 import uvicorn
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def main() -> None:
