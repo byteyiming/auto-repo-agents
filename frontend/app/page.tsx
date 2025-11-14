@@ -12,21 +12,23 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load saved selections from localStorage
+  // Load saved selections from localStorage (client-side only)
   useEffect(() => {
-    const saved = localStorage.getItem('omniDoc_selectedDocuments');
-    if (saved) {
-      try {
-        setSelectedDocuments(JSON.parse(saved));
-      } catch (e) {
-        // Ignore parse errors
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('omniDoc_selectedDocuments');
+      if (saved) {
+        try {
+          setSelectedDocuments(JSON.parse(saved));
+        } catch (e) {
+          // Ignore parse errors
+        }
       }
     }
   }, []);
 
-  // Save selections to localStorage
+  // Save selections to localStorage (client-side only)
   useEffect(() => {
-    if (selectedDocuments.length > 0) {
+    if (typeof window !== 'undefined' && selectedDocuments.length > 0) {
       localStorage.setItem(
         'omniDoc_selectedDocuments',
         JSON.stringify(selectedDocuments)
@@ -59,11 +61,9 @@ export default function Home() {
       // Navigate to project status page
       router.push(`/project/${response.project_id}`);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to create project. Please try again.'
-      );
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create project. Please try again.';
+      console.error('Error creating project:', err);
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };
