@@ -1,0 +1,597 @@
+{
+  "Project Charter": {
+    "min_word_count": 600,
+    "required_sections": ["Project Overview", "Goals / Objectives", "Scope", "Out of Scope", "Timeline / Milestones", "Stakeholders", "Success Criteria", "Risks & Assumptions"],
+    "optional_sections": ["Budget", "Dependencies", "KPIs"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is scope clearly defined?", "Are goals measurable?", "Are risks realistic?", "Is stakeholder list complete?"],
+    "auto_fail": ["Missing Scope OR Goals", "No milestones", "No risks listed"],
+    "dependencies": ["Stakeholders Document", "Market Research & Competitive Analysis", "Business Model"]
+  },
+  "Work Breakdown Structure (WBS)": {
+    "min_word_count": 400,
+    "required_sections": ["High-Level Deliverables", "Work Packages", "Task Breakdown", "Dependencies", "Estimates (Time / Effort)"],
+    "optional_sections": ["RACI", "Tools"],
+    "readability_target": "55-75",
+    "llm_focus": ["Are tasks decomposed correctly?", "Are dependencies clear?", "Are estimates reasonable?"],
+    "auto_fail": ["No deliverables listed", "No work packages", "Completely missing dependencies"],
+    "dependencies": ["Project Charter", "Feature Roadmap", "Requirements Document"]
+  },
+  "PM Management Doc": {
+    "min_word_count": 700,
+    "required_sections": ["Project Roles & Responsibilities", "Processes / Workflow", "Decision-Making Model", "Communication Plan", "Escalation Process"],
+    "optional_sections": ["Meeting Cadence", "Tools & Platforms"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is PM workflow clear?", "Are responsibilities well defined?", "Is communication process actionable?"],
+    "auto_fail": ["Missing communication plan", "No clear responsibilities", "Workflow unclear"],
+    "dependencies": ["Project Charter", "Stakeholders Document"]
+  },
+  "Requirements Document": {
+    "min_word_count": 1200,
+    "required_sections": ["Business Requirements", "Functional Requirements", "Non-Functional Requirements", "User Stories / Use Cases", "Constraints", "Acceptance Criteria"],
+    "optional_sections": ["Data Requirements", "Regulatory Requirements"],
+    "readability_target": "45-60",
+    "llm_focus": ["Are requirements testable?", "Are acceptance criteria measurable?", "Are non-functional requirements complete?"],
+    "auto_fail": ["Missing acceptance criteria", "No functional requirements"],
+    "dependencies": ["Business Model", "Market Research & Competitive Analysis", "Project Charter"]
+  },
+  "Business Model": {
+    "min_word_count": 800,
+    "required_sections": ["Value Proposition", "Customer Segments", "Channels", "Revenue Model", "Cost Structure", "Competitive Landscape"],
+    "optional_sections": ["Risks", "Pricing Model"],
+    "readability_target": "55-70",
+    "llm_focus": ["Is business model coherent?", "Is value proposition compelling?", "Are revenue streams realistic?"],
+    "auto_fail": ["Missing revenue model", "No target customers"],
+    "dependencies": ["Market Research & Competitive Analysis"]
+  },
+    "Stakeholders Document": {
+      "min_word_count": 300,
+      "required_sections": ["Stakeholder List", "Roles", "Influence / Power Matrix", "Communication Needs"],
+      "optional_sections": ["Expectations", "Conflict Points"],
+      "readability_target": "60-75",
+      "llm_focus": ["Are roles correct?", "Is power analysis reasonable?"],
+      "auto_fail": ["Missing list of stakeholders", "No communication needs"],
+      "dependencies": ["Business Model"]
+    },
+  "Feature Roadmap": {
+    "min_word_count": 500,
+    "required_sections": ["Features", "Timeline", "Dependencies", "Priority"],
+    "optional_sections": ["KPIs", "Notes"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are features clearly defined?", "Is prioritization reasonable?", "Are dependencies complete?"],
+    "auto_fail": ["No features listed", "Timeline missing"],
+    "dependencies": ["Requirements Document", "Project Charter", "Business Model"]
+  },
+  "Change Management Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Change Request Process", "Impact Analysis", "Approval Workflow", "Communication Plan"],
+    "optional_sections": ["Tools", "Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is change workflow clear?", "Are approvals documented?", "Is impact assessment sufficient?"],
+    "auto_fail": ["No change request process", "No approval workflow"],
+    "dependencies": ["PM Management Doc", "Feature Roadmap"]
+  },
+  "Risk Management / Mitigation Plan": {
+    "min_word_count": 500,
+    "required_sections": ["Risk Identification", "Impact Assessment", "Likelihood", "Mitigation Strategies", "Monitoring Plan"],
+    "optional_sections": ["Contingency Plan", "Lessons Learned"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are major risks identified?", "Are mitigations realistic?", "Is monitoring plan actionable?"],
+    "auto_fail": ["No risks identified", "No mitigation strategies"],
+    "dependencies": ["Project Charter", "Requirements Document", "Business Model"]
+  },
+  "PRD (Product Requirements Doc)": {
+    "min_word_count": 1000,
+    "required_sections": ["Introduction", "Features", "User Stories", "Acceptance Criteria", "Non-Functional Requirements", "Dependencies"],
+    "optional_sections": ["UI/UX Mockups", "Data Requirements"],
+    "readability_target": "45-60",
+    "llm_focus": ["Are features complete?", "Are user stories clear?", "Are acceptance criteria testable?"],
+    "auto_fail": ["No features", "Missing acceptance criteria"],
+    "dependencies": ["Requirements Document", "Feature Roadmap"]
+  },
+  "FSD (Functional Spec Doc)": {
+    "min_word_count": 800,
+    "required_sections": ["Introduction", "Feature Specifications", "Data Flow", "APIs", "Constraints", "Acceptance Criteria"],
+    "optional_sections": ["Mockups", "Sequence Diagrams"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are functional details clear?", "Are data flows correct?", "Are constraints documented?"],
+    "auto_fail": ["Missing feature specs", "No data flow described"],
+    "dependencies": ["PRD (Product Requirements Doc)", "TAD (Technical Architecture Doc)"]
+  },
+  "TAD (Technical Architecture Doc)": {
+    "min_word_count": 1000,
+    "required_sections": ["Architecture Overview", "System Components", "Data Flow", "Deployment Diagram", "Integration Points", "Non-Functional Requirements"],
+    "optional_sections": ["Tech Stack", "Scalability Plan"],
+    "readability_target": "45-60",
+    "llm_focus": ["Is architecture complete?", "Are components well defined?", "Are integration points clear?"],
+    "auto_fail": ["No architecture diagram", "Missing components"],
+    "dependencies": ["Database Schema", "API Documentation"]
+  },
+  "UI Mockups / Mockups Docs": {
+    "min_word_count": 200,
+    "required_sections": ["Screens", "Layouts", "Navigation Flow", "Annotations"],
+    "optional_sections": ["Responsive Design Notes", "Accessibility Considerations"],
+    "readability_target": "60-80",
+    "llm_focus": ["Are mockups clear?", "Is navigation flow consistent?", "Are annotations sufficient?"],
+    "auto_fail": ["Missing key screens", "No navigation flow"],
+    "dependencies": ["PRD (Product Requirements Doc)"]
+  },
+  "UI Style Guide": {
+    "min_word_count": 300,
+    "required_sections": ["Colors", "Typography", "Components", "Spacing", "Icons"],
+    "optional_sections": ["Motion Guidelines", "Accessibility"],
+    "readability_target": "60-75",
+    "llm_focus": ["Are style rules consistent?", "Is accessibility considered?"],
+    "auto_fail": ["Missing typography", "No color palette"],
+    "dependencies": ["UI Mockups / Mockups Docs"]
+  },
+  "Interaction / Flow Diagrams": {
+    "min_word_count": 200,
+    "required_sections": ["User Flows", "System Flows", "Decision Points", "Error Handling"],
+    "optional_sections": ["Annotations", "Notes"],
+    "readability_target": "60-75",
+    "llm_focus": ["Are flows clear?", "Are decision points logical?", "Is error handling documented?"],
+    "auto_fail": ["No user flows", "No system flows"],
+    "dependencies": ["UI Mockups / Mockups Docs", "FSD (Functional Spec Doc)"]
+  },
+  "Onboarding Flow": {
+    "min_word_count": 300,
+    "required_sections": ["Steps", "Screens", "Guidance / Tips", "Error Handling"],
+    "optional_sections": ["Analytics Hooks"],
+    "readability_target": "60-75",
+    "llm_focus": ["Is onboarding flow clear?", "Are tips actionable?", "Are error paths handled?"],
+    "auto_fail": ["Missing steps", "No screens provided"],
+    "dependencies": ["PRD (Product Requirements Doc)", "UI Mockups / Mockups Docs"]
+  },
+  "API Documentation": {
+    "min_word_count": 500,
+    "required_sections": ["Endpoints", "Request/Response Format", "Authentication", "Error Codes", "Examples"],
+    "optional_sections": ["Rate Limits", "Versioning"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are APIs clear?", "Are examples sufficient?", "Is authentication explained?"],
+    "auto_fail": ["No endpoints", "No request/response format"],
+    "dependencies": []
+  },
+  "Database Schema": {
+    "min_word_count": 300,
+    "required_sections": ["Tables", "Fields", "Primary Keys", "Foreign Keys", "Indexes", "Relationships"],
+    "optional_sections": ["ER Diagram", "Constraints"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are tables and relations correct?", "Are keys defined?", "Is schema consistent with FSD?"],
+    "auto_fail": ["No tables defined", "Missing primary keys"],
+    "dependencies": []
+  },
+  "Developer Guide / README": {
+    "min_word_count": 400,
+    "required_sections": ["Setup Instructions", "Dependencies", "Folder Structure", "Build / Run", "Examples"],
+    "optional_sections": ["Contributing Guide", "Coding Standards"],
+    "readability_target": "55-75",
+    "llm_focus": ["Are setup instructions clear?", "Is folder structure explained?", "Are examples sufficient?"],
+    "auto_fail": ["No setup instructions", "Missing dependencies"],
+    "dependencies": ["API Documentation", "Database Schema"]
+  },
+  "CI/CD Pipeline Doc": {
+    "min_word_count": 400,
+    "required_sections": ["Pipeline Overview", "Steps", "Triggers", "Rollback Procedures", "Notifications"],
+    "optional_sections": ["Tools", "Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is CI/CD workflow clear?", "Are rollback steps documented?", "Are notifications configured?"],
+    "auto_fail": ["No steps listed", "No rollback procedures"],
+    "dependencies": ["Developer Guide / README", "TAD (Technical Architecture Doc)"]
+  },
+  "Deployment Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Environments", "Deployment Steps", "Rollback", "Dependencies", "Schedule"],
+    "optional_sections": ["Monitoring", "Notifications"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is deployment clear?", "Are rollback steps safe?", "Are dependencies documented?"],
+    "auto_fail": ["No deployment steps", "No environments defined"],
+    "dependencies": ["CI/CD Pipeline Doc", "TAD (Technical Architecture Doc)"]
+  },
+  "Scalability Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Current System", "Bottlenecks", "Scaling Strategies", "Load Testing", "Monitoring"],
+    "optional_sections": ["Cost Analysis", "Future Growth Plan"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are bottlenecks identified?", "Are scaling strategies realistic?", "Is monitoring planned?"],
+    "auto_fail": ["No scaling strategies", "No bottlenecks analysis"],
+    "dependencies": ["TAD (Technical Architecture Doc)"]
+  },
+  "Monitoring & Logging Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Metrics to Monitor", "Logging Strategy", "Alerting Rules", "Dashboards", "Retention Policy"],
+    "optional_sections": ["Tools", "Integration Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are monitoring metrics clear?", "Is logging strategy complete?", "Are alerts actionable?"],
+    "auto_fail": ["No monitoring metrics", "No alerting rules"],
+    "dependencies": ["TAD (Technical Architecture Doc)", "CI/CD Pipeline Doc"]
+  },
+  "Configuration Management Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Configuration Items", "Version Control", "Change Management", "Environment Management"],
+    "optional_sections": ["Tools", "Audit Logs"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is configuration management process clear?", "Are items tracked correctly?", "Is versioning defined?"],
+    "auto_fail": ["No configuration items", "No version control"],
+    "dependencies": ["Developer Guide / README", "CI/CD Pipeline Doc"]
+  },
+  "Technical Debt Log / Refactoring Plan": {
+    "min_word_count": 300,
+    "required_sections": ["Known Technical Debt", "Priority", "Refactoring Plan", "Impact"],
+    "optional_sections": ["Metrics", "Historical Data"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are debts listed clearly?", "Is refactoring plan actionable?", "Is priority reasonable?"],
+    "auto_fail": ["No debts listed", "No refactoring plan"],
+    "dependencies": ["TAD (Technical Architecture Doc)", "FSD (Functional Spec Doc)"]
+  },
+  "API Versioning & Deprecation Policy": {
+    "min_word_count": 300,
+    "required_sections": ["Versioning Scheme", "Deprecation Timeline", "Backward Compatibility", "Communication Plan"],
+    "optional_sections": ["Tools", "Examples"],
+    "readability_target": "55-70",
+    "llm_focus": ["Is versioning scheme clear?", "Are deprecation rules clear?", "Is backward compatibility maintained?"],
+    "auto_fail": ["No versioning scheme", "No deprecation timeline"],
+    "dependencies": ["API Documentation"]
+  },
+  "Test Plan Document": {
+    "min_word_count": 600,
+    "required_sections": ["Test Strategy", "Test Cases", "Acceptance Criteria", "Test Environment", "Metrics"],
+    "optional_sections": ["Automation Plan", "Regression Plan"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are test cases complete?", "Are acceptance criteria measurable?", "Is strategy clear?"],
+    "auto_fail": ["No test cases", "No acceptance criteria"],
+    "dependencies": ["PRD (Product Requirements Doc)", "FSD (Functional Spec Doc)"]
+  },
+  "User Support Document": {
+    "min_word_count": 400,
+    "required_sections": ["User Instructions", "Troubleshooting", "FAQ", "Contact Info"],
+    "optional_sections": ["Video Guides", "Known Issues"],
+    "readability_target": "60-75",
+    "llm_focus": ["Are instructions clear?", "Is troubleshooting sufficient?", "Is information accessible?"],
+    "auto_fail": ["No troubleshooting steps", "Missing contact info"],
+    "dependencies": ["PRD (Product Requirements Doc)", "Knowledge Base"]
+  },
+  "Support Playbook": {
+    "min_word_count": 500,
+    "required_sections": ["Support Workflow", "Escalation Steps", "Common Issues", "Communication Templates"],
+    "optional_sections": ["Metrics", "Tools"],
+    "readability_target": "55-70",
+    "llm_focus": ["Is workflow clear?", "Are escalation steps actionable?", "Are common issues documented?"],
+    "auto_fail": ["No workflow", "No escalation steps"],
+    "dependencies": ["User Support Document", "Test Plan Document"]
+  },
+  "Support Team Training Document": {
+    "min_word_count": 400,
+    "required_sections": ["Training Objectives", "Modules / Sessions", "Materials", "Assessment"],
+    "optional_sections": ["Videos", "Quizzes"],
+    "readability_target": "60-75",
+    "llm_focus": ["Is training plan complete?", "Are objectives clear?", "Is assessment defined?"],
+    "auto_fail": ["No objectives", "No training modules"],
+    "dependencies": ["Support Playbook", "User Support Document"]
+  },
+  "Knowledge Base": {
+    "min_word_count": 500,
+    "required_sections": ["Articles / Topics", "Search Tags", "FAQs", "Update Log"],
+    "optional_sections": ["Videos", "User Feedback Section"],
+    "readability_target": "60-75",
+    "llm_focus": ["Are articles complete?", "Is search functionality clear?", "Are FAQs useful?"],
+    "auto_fail": ["No articles", "No FAQs"],
+    "dependencies": []
+  },
+  "User Feedback Plan": {
+    "min_word_count": 300,
+    "required_sections": ["Feedback Collection Methods", "Analysis Process", "Reporting", "Action Plan"],
+    "optional_sections": ["Metrics", "Follow-up Procedures"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are feedback methods sufficient?", "Is analysis actionable?", "Are metrics defined?"],
+    "auto_fail": ["No collection methods", "No action plan"],
+    "dependencies": ["Knowledge Base", "Test Plan Document"]
+  },
+  "Experimentation / A/B Testing Docs": {
+    "min_word_count": 300,
+    "required_sections": ["Hypothesis", "Experiment Design", "Metrics", "Analysis Plan", "Results"],
+    "optional_sections": ["Tools", "Variants"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is hypothesis clear?", "Is experiment designed correctly?", "Are metrics measurable?"],
+    "auto_fail": ["No hypothesis", "No experiment design"],
+    "dependencies": ["Feature Roadmap", "PRD (Product Requirements Doc)"]
+  },
+  "Security Plan": {
+    "min_word_count": 500,
+    "required_sections": ["Threat Model", "Security Controls", "Monitoring", "Incident Response", "Compliance References"],
+    "optional_sections": ["Penetration Testing", "Tools"],
+    "readability_target": "45-60",
+    "llm_focus": ["Are threats identified?", "Are controls sufficient?", "Is monitoring defined?"],
+    "auto_fail": ["No threat model", "No controls listed"],
+    "dependencies": ["TAD (Technical Architecture Doc)", "CI/CD Pipeline Doc"]
+  },
+  "Privacy Policy / GDPR Compliance": {
+    "min_word_count": 500,
+    "required_sections": ["Data Collection", "Data Use", "User Rights", "Data Retention", "Compliance References"],
+    "optional_sections": ["Cookies Policy", "Third-Party Sharing"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are user rights clear?", "Is compliance explained?", "Are data retention rules correct?"],
+    "auto_fail": ["No user rights section", "No data retention section"],
+    "dependencies": ["Security Plan"]
+  },
+  "Accessibility Plan / ADA Compliance": {
+    "min_word_count": 300,
+    "required_sections": ["Accessibility Standards", "Implementation Guidelines", "Testing Plan", "Monitoring"],
+    "optional_sections": ["Tools", "Training"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are accessibility requirements clear?", "Are testing plans actionable?"],
+    "auto_fail": ["No standards defined", "No testing plan"],
+    "dependencies": ["UI Style Guide", "UI Mockups / Mockups Docs"]
+  },
+  "Localization / Internationalization Plan": {
+    "min_word_count": 300,
+    "required_sections": ["Supported Languages", "Translation Process", "Formatting Guidelines", "Testing Plan"],
+    "optional_sections": ["Tools", "Metrics"],
+    "readability_target": "55-70",
+    "llm_focus": ["Is localization plan complete?", "Are languages well defined?", "Is testing plan clear?"],
+    "auto_fail": ["No languages defined", "No translation process"],
+    "dependencies": ["UI Mockups / Mockups Docs", "PRD (Product Requirements Doc)"]
+  },
+  "Data Retention & Archiving Policy": {
+    "min_word_count": 300,
+    "required_sections": ["Data Types", "Retention Periods", "Archiving Process", "Deletion Process"],
+    "optional_sections": ["Compliance References", "Tools"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are retention periods defined?", "Is archiving process clear?", "Are compliance references sufficient?"],
+    "auto_fail": ["No retention periods", "No deletion process"],
+    "dependencies": ["Database Schema"]
+  },
+  "Legal / Terms of Service (ToS)": {
+    "min_word_count": 400,
+    "required_sections": ["User Rights", "User Responsibilities", "Limitations of Liability", "Dispute Resolution", "Governing Law"],
+    "optional_sections": ["Third-Party Services", "Updates / Changes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are legal obligations clear?", "Is liability defined?", "Are dispute resolution terms clear?"],
+    "auto_fail": ["No user rights section", "No liability section"],
+    "dependencies": ["Privacy Policy / GDPR Compliance"]
+  },
+  "Incident Response Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Incident Identification", "Classification", "Response Steps", "Communication Plan", "Post-Incident Review"],
+    "optional_sections": ["Metrics", "Tools"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are incidents classified?", "Are response steps clear?", "Is post-incident review actionable?"],
+    "auto_fail": ["No response steps", "No communication plan"],
+    "dependencies": ["Security Plan", "Monitoring & Logging Plan"]
+  },
+  "End-of-Life (EOL) Policy": {
+    "min_word_count": 300,
+    "required_sections": ["Product / Feature List", "Deprecation Timeline", "Communication Plan", "Data Migration / Archiving"],
+    "optional_sections": ["Customer Support", "Fallbacks"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are deprecation timelines clear?", "Is migration plan sufficient?", "Is communication clear?"],
+    "auto_fail": ["No product list", "No timeline"],
+    "dependencies": ["Feature Roadmap", "API Versioning & Deprecation Policy"]
+  },
+  "KPIs / Metrics Document": {
+    "min_word_count": 400,
+    "required_sections": ["Metric Definitions", "Data Sources", "Targets / Benchmarks", "Reporting Frequency"],
+    "optional_sections": ["Dashboards", "Visualization Guidelines"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are KPIs measurable?", "Are data sources clear?", "Are targets realistic?"],
+    "auto_fail": ["No KPIs defined", "No data sources"],
+    "dependencies": ["Feature Roadmap"]
+  },
+  "Dashboard Metrics Specification": {
+    "min_word_count": 300,
+    "required_sections": ["Dashboard Layout", "Metric Mapping", "Data Sources", "Visualization Guidelines"],
+    "optional_sections": ["Update Frequency", "Alerts"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are metrics mapped correctly?", "Is layout intuitive?", "Are sources correct?"],
+    "auto_fail": ["No metrics mapping", "No data sources"],
+    "dependencies": ["KPIs / Metrics Document"]
+  },
+  "Release Notes / Version History": {
+    "min_word_count": 200,
+    "required_sections": ["Version Number", "Date", "Changes / Features Added", "Bugs Fixed", "Deprecations"],
+    "optional_sections": ["Known Issues", "Upgrade Notes"],
+    "readability_target": "60-75",
+    "llm_focus": ["Are changes described clearly?", "Are fixes documented?", "Are deprecations explained?"],
+    "auto_fail": ["No version number", "No changes listed"],
+    "dependencies": ["PRD (Product Requirements Doc)", "FSD (Functional Spec Doc)"]
+  },
+
+  "Go-To-Market (GTM) Strategy": {
+    "min_word_count": 400,
+    "required_sections": ["Target Audience", "Value Proposition", "Marketing Channels", "Launch Plan", "KPIs"],
+    "optional_sections": ["Budget", "Partnerships"],
+    "readability_target": "55-70",
+    "llm_focus": ["Is target audience clear?", "Is value proposition compelling?", "Are launch plan and KPIs actionable?"],
+    "auto_fail": ["No target audience", "No launch plan"],
+    "dependencies": ["Feature Roadmap", "Business Model"]
+  },
+  "Third-Party Integration Documentation": {
+    "min_word_count": 400,
+    "required_sections": ["API Endpoints", "Authentication", "Data Formats", "Error Handling", "Examples"],
+    "optional_sections": ["SDKs", "Limitations"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are integrations clearly described?", "Is authentication process clear?", "Are examples sufficient?"],
+    "auto_fail": ["No API endpoints", "No examples"],
+    "dependencies": ["API Documentation", "TAD (Technical Architecture Doc)"]
+  },
+  "User Analytics / Behavior Tracking Doc": {
+    "min_word_count": 400,
+    "required_sections": ["Tracking Events", "Data Collection Methods", "Metrics Definition", "Analysis Plan", "Privacy Considerations"],
+    "optional_sections": ["Dashboards", "Visualization Guidelines"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are analytics events clear?", "Is data collection compliant?", "Are analysis methods actionable?"],
+    "auto_fail": ["No events defined", "No metrics defined"],
+    "dependencies": ["PRD (Product Requirements Doc)", "Dashboard Metrics Specification"]
+  },
+  "Backup & Recovery Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Backup Strategy", "Recovery Procedures", "Frequency", "Storage Location", "Testing / Validation"],
+    "optional_sections": ["Tools", "RTO / RPO Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is backup strategy clear?", "Are recovery steps actionable?", "Is testing plan sufficient?"],
+    "auto_fail": ["No backup strategy", "No recovery procedures"],
+    "dependencies": ["Database Schema", "Configuration Management Plan"]
+  },
+  "Maintenance Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Routine Tasks", "Frequency", "Ownership", "Monitoring", "Escalation"],
+    "optional_sections": ["Tools", "Documentation References"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are tasks clearly defined?", "Is ownership clear?", "Are escalation steps sufficient?"],
+    "auto_fail": ["No routine tasks", "No ownership defined"],
+    "dependencies": ["CI/CD Pipeline Doc", "Monitoring & Logging Plan"]
+  },
+  "SLA / Service Level Agreement": {
+    "min_word_count": 300,
+    "required_sections": ["Service Scope", "Uptime Guarantees", "Support Response Times", "Penalties / Remedies", "Exclusions"],
+    "optional_sections": ["Reporting", "Monitoring Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are SLAs clear?", "Are response times measurable?", "Are exclusions explained?"],
+    "auto_fail": ["No service scope", "No uptime guarantees"],
+    "dependencies": ["Business Model", "Maintenance Plan"]
+  },
+  "Business Continuity Plan (BCP)": {
+    "min_word_count": 400,
+    "required_sections": ["Critical Business Functions", "Risk Assessment", "Recovery Strategies", "Communication Plan", "Testing / Review"],
+    "optional_sections": ["Tools", "Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are critical functions identified?", "Are recovery strategies actionable?", "Is testing plan sufficient?"],
+    "auto_fail": ["No risk assessment", "No recovery strategies"],
+    "dependencies": ["Risk Management / Mitigation Plan", "Backup & Recovery Plan"]
+  },
+  "Vendor / Supplier Management Docs": {
+    "min_word_count": 300,
+    "required_sections": ["Vendor List", "Contracts / SLAs", "Performance Metrics", "Evaluation / Review Process"],
+    "optional_sections": ["Communication Guidelines", "Escalation Steps"],
+    "readability_target": "55-70",
+    "llm_focus": ["Are vendors clearly listed?", "Are performance metrics measurable?", "Is review process actionable?"],
+    "auto_fail": ["No vendor list", "No evaluation process"],
+    "dependencies": ["SLA / Service Level Agreement", "Business Continuity Plan (BCP)"]
+  },
+  "Cloud Infrastructure / Cost Management Doc": {
+    "min_word_count": 400,
+    "required_sections": ["Architecture Overview", "Resource Allocation", "Cost Tracking", "Optimization Plan", "Scaling Considerations"],
+    "optional_sections": ["Tools", "Automation Scripts"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is architecture clear?", "Is cost tracking sufficient?", "Are optimization suggestions actionable?"],
+    "auto_fail": ["No architecture overview", "No cost tracking"],
+    "dependencies": ["TAD (Technical Architecture Doc)", "Scalability Plan"]
+  },
+  "Performance Tuning & Optimization Doc": {
+    "min_word_count": 400,
+    "required_sections": ["Current Performance Metrics", "Bottleneck Analysis", "Optimization Steps", "Expected Improvements"],
+    "optional_sections": ["Tools", "Monitoring Guidelines"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are performance metrics clear?", "Are bottlenecks identified?", "Are optimization steps actionable?"],
+    "auto_fail": ["No metrics", "No optimization steps"],
+    "dependencies": ["TAD (Technical Architecture Doc)", "Monitoring & Logging Plan"]
+  },
+    "Market Research & Competitive Analysis": {
+      "min_word_count": 400,
+      "required_sections": ["Market Overview", "Competitor Analysis", "Trends", "Opportunities", "Recommendations"],
+      "optional_sections": ["Data Sources", "Charts / Tables"],
+      "readability_target": "55-70",
+      "llm_focus": ["Is market overview clear?", "Are competitors analyzed?", "Are recommendations actionable?"],
+      "auto_fail": ["No market overview", "No competitor analysis"],
+      "dependencies": []
+    },
+  "Innovation / R&D Plan": {
+    "min_word_count": 400,
+    "required_sections": ["Research Goals", "Exploration Areas", "Prioritization", "Implementation Plan", "Metrics"],
+    "optional_sections": ["Budget", "Tools"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are research goals clear?", "Are exploration areas actionable?", "Is implementation plan realistic?"],
+    "auto_fail": ["No research goals", "No implementation plan"],
+    "dependencies": ["Feature Roadmap", "Technical Audit / Compliance Audit Reports"]
+  },
+  "Technical Audit / Compliance Audit Reports": {
+    "min_word_count": 400,
+    "required_sections": ["Scope", "Findings", "Recommendations", "Compliance References", "Action Plan"],
+    "optional_sections": ["Tools", "Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are findings clear?", "Are recommendations actionable?", "Is compliance addressed?"],
+    "auto_fail": ["No findings", "No recommendations"],
+    "dependencies": ["Security Plan", "Privacy Policy / GDPR Compliance"]
+  },
+  "Experimentation / Feature Flag Docs": {
+    "min_word_count": 300,
+    "required_sections": ["Feature Name", "Flag Strategy", "Target Audience", "Metrics", "Rollout Plan"],
+    "optional_sections": ["Dependencies", "Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is feature flag strategy clear?", "Are rollout steps actionable?", "Are metrics measurable?"],
+    "auto_fail": ["No feature name", "No rollout plan"],
+    "dependencies": ["PRD (Product Requirements Doc)", "Experimentation / A/B Testing Docs"]
+  },
+  "Data Governance / Data Quality Policy": {
+    "min_word_count": 400,
+    "required_sections": ["Data Ownership", "Data Standards", "Validation Rules", "Access Control", "Audit Process"],
+    "optional_sections": ["Tools", "Metrics"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are data ownership rules clear?", "Are standards sufficient?", "Are audit processes defined?"],
+    "auto_fail": ["No ownership rules", "No validation rules"],
+    "dependencies": ["Database Schema", "User Analytics / Behavior Tracking Doc"]
+  },
+  "Assumptions": {
+    "min_word_count": 100,
+    "required_sections": ["Assumption Description", "Impact", "Owner"],
+    "optional_sections": ["Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are assumptions clearly stated?", "Is impact reasonable?", "Is owner assigned?"],
+    "auto_fail": ["No assumptions listed"],
+    "dependencies": []
+  },
+  "Diagrams": {
+    "min_word_count": 0,
+    "required_sections": ["Diagram Title", "Diagram Type", "Description"],
+    "optional_sections": ["Notes", "Version"],
+    "readability_target": "N/A",
+    "llm_focus": ["Are diagrams labeled?", "Is description clear?", "Do diagrams match specifications?"],
+    "auto_fail": ["No diagrams included"],
+    "dependencies": []
+  },
+  "Notes": {
+    "min_word_count": 50,
+    "required_sections": ["Context", "Details"],
+    "optional_sections": ["References"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are notes informative?", "Do they clarify context?", "Are references included if necessary?"],
+    "auto_fail": ["Empty notes section"],
+    "dependencies": []
+  },
+  "Alternate Designs": {
+    "min_word_count": 150,
+    "required_sections": ["Design Description", "Pros & Cons", "Impact Analysis"],
+    "optional_sections": ["Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are alternative designs clear?", "Are pros and cons explained?", "Is impact analysis sufficient?"],
+    "auto_fail": ["No alternate designs"],
+    "dependencies": ["Diagrams", "UI Mockups / Mockups Docs"]
+  },
+  "Tips": {
+    "min_word_count": 50,
+    "required_sections": ["Tip Description", "Context", "Use Case"],
+    "optional_sections": ["Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are tips actionable?", "Are they clear and concise?", "Do they help users?"],
+    "auto_fail": ["No tips provided"],
+    "dependencies": []
+  },
+  "Authentication": {
+    "min_word_count": 150,
+    "required_sections": ["Auth Method", "Implementation Details", "Security Considerations"],
+    "optional_sections": ["Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Is authentication method clear?", "Are security considerations addressed?", "Are details actionable?"],
+    "auto_fail": ["No authentication details"],
+    "dependencies": ["API Documentation"]
+  },
+  "Links": {
+    "min_word_count": 50,
+    "required_sections": ["Resource Name", "URL", "Purpose"],
+    "optional_sections": ["Notes"],
+    "readability_target": "50-65",
+    "llm_focus": ["Are links correct?", "Do they provide relevant resources?", "Are descriptions clear?"],
+    "auto_fail": ["No links listed"],
+    "dependencies": []
+  }
+}
