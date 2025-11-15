@@ -69,12 +69,6 @@ UPSTASH_HOST=$(echo "$UPSTASH_REDIS_REST_URL" | sed 's|https://||' | sed 's|http
 # Build standard Redis URL for Celery
 UPSTASH_REDIS_URL="redis://default:${UPSTASH_REDIS_REST_TOKEN}@${UPSTASH_HOST}:6379"
 
-read -p "Enter your Upstash Redis REST URL (or press Enter to use production default): " UPSTASH_REDIS_REST_URL
-UPSTASH_REDIS_REST_URL=${UPSTASH_REDIS_REST_URL:-"https://right-loon-30051.upstash.io"}
-
-read -p "Enter your Upstash Redis REST Token (or press Enter to use production default): " UPSTASH_REDIS_REST_TOKEN
-UPSTASH_REDIS_REST_TOKEN=${UPSTASH_REDIS_REST_TOKEN:-"AXVjAAIncDJlNDY0OGUwNzdkMjc0M2U5OGE2Yzg4ZGUzYWU3YWVlZXAyMzAwNTE"}
-
 echo -e "${GREEN}Step 6: Cloning repository...${NC}"
 if [ ! -d "$APP_DIR" ]; then
     sudo mkdir -p $APP_DIR
