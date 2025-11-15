@@ -87,6 +87,7 @@ Thumbs.db
 !HOSTINGER_DNS_SETUP.md
 !AZURE_DEPLOYMENT.md
 !AZURE_FREE_TIER_SETUP.md
+!DEPLOYMENT_OPTIONS.md
 
 # Documentation files in docs/ (allow QUALITY_SCORING.md)
 docs/*.md

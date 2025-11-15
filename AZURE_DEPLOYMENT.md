@@ -55,7 +55,10 @@ Azure App Service has an **Always Free** tier (F1) that's not shown in your quot
    - **Subscription**: Your subscription
    - **Resource Group**: Create new or use existing
    - **Name**: `omnidoc-api` (or your preferred name)
-   - **Publish**: Code
+   - **Publish**: **Code** (recommended) or Container
+     - **Code**: Easier, Azure builds automatically
+     - **Container**: More control, requires Dockerfile
+     - See [Deployment Options](DEPLOYMENT_OPTIONS.md) for comparison
    - **Runtime stack**: Python 3.9 or 3.10
    - **Operating System**: Linux
    - **Region**: Choose closest to you
