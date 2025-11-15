@@ -75,6 +75,7 @@ class Settings:
     # LLM Configuration
     default_llm_provider: str
     rate_limit_per_minute: int
+    rate_limit_per_day: int
     # LLM Temperature Configuration
     default_temperature: float  # Default temperature for all providers
     ollama_temperature: float   # Temperature for Ollama (lower for better instruction following)
@@ -111,7 +112,8 @@ def get_settings() -> Settings:
             enable_performance_logging=True,
             docs_dir=os.getenv("DOCS_DIR", "docs"),
             default_llm_provider=os.getenv("LLM_PROVIDER", "gemini"),
-            rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "50")),
+            rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "2")),  # Gemini free tier: 2 RPM
+            rate_limit_per_day=int(os.getenv("RATE_LIMIT_PER_DAY", "50")),  # Gemini free tier: 50 RPD
             default_temperature=default_temperature,
             ollama_temperature=ollama_temperature,
             gemini_temperature=gemini_temperature,
@@ -129,7 +131,8 @@ def get_settings() -> Settings:
             enable_performance_logging=False,
             docs_dir=os.getenv("DOCS_DIR", "docs/test"),
             default_llm_provider=os.getenv("LLM_PROVIDER", "gemini"),
-            rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "100")),
+            rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "2")),  # Gemini free tier: 2 RPM
+            rate_limit_per_day=int(os.getenv("RATE_LIMIT_PER_DAY", "50")),  # Gemini free tier: 50 RPD
             default_temperature=default_temperature,
             ollama_temperature=ollama_temperature,
             gemini_temperature=gemini_temperature,
@@ -147,7 +150,8 @@ def get_settings() -> Settings:
             enable_performance_logging=True,
             docs_dir=os.getenv("DOCS_DIR", "docs"),
             default_llm_provider=os.getenv("LLM_PROVIDER", "gemini"),
-            rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "50")),
+            rate_limit_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "2")),  # Gemini free tier: 2 RPM
+            rate_limit_per_day=int(os.getenv("RATE_LIMIT_PER_DAY", "50")),  # Gemini free tier: 50 RPD
             default_temperature=default_temperature,
             ollama_temperature=ollama_temperature,
             gemini_temperature=gemini_temperature,

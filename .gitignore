@@ -83,6 +83,7 @@ Thumbs.db
 !UPSTASH_SETUP.md
 !CODE_IMPROVEMENTS.md
 !DEPLOYMENT.md
+!DOMAIN_ARCHITECTURE.md
 
 # Documentation files in docs/ (allow QUALITY_SCORING.md)
 docs/*.md

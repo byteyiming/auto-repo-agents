@@ -88,7 +88,8 @@ class BaseAgent(ABC):
         settings = get_settings()
         self.rate_limiter = rate_limiter or RequestQueue(
             max_rate=settings.rate_limit_per_minute, 
-            period=60
+            period=60,
+            max_daily_requests=settings.rate_limit_per_day
         )
         
         # Initialize async rate limiter (lazy initialization)
@@ -119,7 +120,8 @@ class BaseAgent(ABC):
             settings = get_settings()
             self._async_rate_limiter = AsyncRequestQueue(
                 max_rate=settings.rate_limit_per_minute,
-                period=60
+                period=60,
+                max_daily_requests=settings.rate_limit_per_day
             )
         return self._async_rate_limiter
     
