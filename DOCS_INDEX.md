@@ -61,6 +61,12 @@ All documentation is now in the project root for easy access:
   - Environment variables
   - Custom domain configuration
 
+- **[AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)** - Azure deployment guide
+  - Azure App Service deployment (recommended)
+  - Azure VM deployment
+  - Alternative to Oracle Cloud
+  - Cost comparison and migration guide
+
 ### Frontend Documentation
 - **[FRONTEND.md](FRONTEND.md)** - Complete frontend guide
   - Next.js architecture
@@ -137,11 +143,12 @@ All documentation is now in the project root for easy access:
 1. [DEPLOYMENT_STRATEGY.md](DEPLOYMENT_STRATEGY.md) - **Start here** - Deployment strategy
 2. [DEPLOYMENT.md](DEPLOYMENT.md) - Complete deployment guide (all platforms)
 3. [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
-4. [NEON_SETUP.md](NEON_SETUP.md) - Database setup
-5. [UPSTASH_SETUP.md](UPSTASH_SETUP.md) - Redis setup
-6. [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) - Frontend deployment
-7. [SECURITY.md](SECURITY.md) - Security configuration
-8. [MAINTENANCE.md](MAINTENANCE.md) - Maintenance procedures
+4. [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md) - Azure deployment (alternative to Oracle Cloud)
+5. [NEON_SETUP.md](NEON_SETUP.md) - Database setup
+6. [UPSTASH_SETUP.md](UPSTASH_SETUP.md) - Redis setup
+7. [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) - Frontend deployment
+8. [SECURITY.md](SECURITY.md) - Security configuration
+9. [MAINTENANCE.md](MAINTENANCE.md) - Maintenance procedures
 
 ### For UI/UX Development
 1. [UI_IMPROVEMENTS.md](UI_IMPROVEMENTS.md) - Complete UI improvement roadmap

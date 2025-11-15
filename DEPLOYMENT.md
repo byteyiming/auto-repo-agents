@@ -64,6 +64,20 @@ See [DEPLOYMENT_STRATEGY.md](DEPLOYMENT_STRATEGY.md) for detailed strategy on wh
 - **Cache/Queue**: Upstash (managed Redis)
 - **Task Queue**: Celery workers on Oracle Cloud
 
+## 🚀 Deployment Options
+
+### Option 1: Oracle Cloud (Current)
+
+See [Oracle Cloud Deployment](#oracle-cloud-deployment) section below.
+
+### Option 2: Azure (Alternative)
+
+See [Azure Deployment Guide](AZURE_DEPLOYMENT.md) for complete Azure setup instructions.
+
+**Quick Comparison:**
+- **Oracle Cloud**: Free tier available, more manual setup
+- **Azure**: Easier deployment (App Service), less free tier options
+
 ## 🚀 Oracle Cloud Deployment
 
 ### Prerequisites
@@ -381,6 +395,7 @@ sudo journalctl -u omnidoc-celery -f
 - [Neon Database Setup](NEON_SETUP.md) - Configure managed PostgreSQL
 - [Upstash Redis Setup](UPSTASH_SETUP.md) - Configure managed Redis
 - [Vercel Deployment](VERCEL_DEPLOYMENT.md) - Frontend deployment
+- [Azure Deployment](AZURE_DEPLOYMENT.md) - Azure deployment guide (alternative to Oracle Cloud)
 
 ### Documentation
 - [Backend Guide](BACKEND.md) - API and architecture
