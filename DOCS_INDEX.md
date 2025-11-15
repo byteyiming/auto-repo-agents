@@ -25,24 +25,15 @@ All documentation is now in the project root for easy access:
   - Development guide
 
 ### Production Deployment
-- **[README_PRODUCTION.md](README_PRODUCTION.md)** - Production deployment guide
-  - Production features overview
-  - Architecture diagram
-  - Docker deployment
-  - Security checklist
-
-- **[PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)** - Detailed production setup
-  - Step-by-step setup instructions
-  - System dependencies
-  - Configuration guide
-  - Monitoring and troubleshooting
-
-- **[ORACLE_CLOUD_DEPLOYMENT.md](ORACLE_CLOUD_DEPLOYMENT.md)** - Oracle Cloud Free Tier deployment
-  - Complete step-by-step guide for OCI
-  - Nginx configuration
-  - SSL/HTTPS setup
-  - Systemd service configuration
-  - Oracle Cloud specific notes
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide (consolidated)
+  - Deployment strategy
+  - Architecture overview
+  - Oracle Cloud deployment (automated script)
+  - Frontend deployment (Vercel)
+  - Environment configuration
+  - Pre-deployment checklist
+  - Post-deployment verification
+  - Troubleshooting
 
 - **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Pre-deployment checklist
   - Pre-deployment verification
@@ -54,6 +45,21 @@ All documentation is now in the project root for easy access:
   - Domain: `https://omnidoc.info`
   - API: `https://api.omnidoc.info`
   - DNS and SSL configuration
+
+- **[NEON_SETUP.md](NEON_SETUP.md)** - Neon database setup
+  - Managed PostgreSQL configuration
+  - Connection string setup
+  - Migration guide
+
+- **[UPSTASH_SETUP.md](UPSTASH_SETUP.md)** - Upstash Redis setup
+  - Managed Redis configuration
+  - Connection string setup
+  - Free tier limits
+
+- **[VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md)** - Frontend deployment on Vercel
+  - Vercel setup steps
+  - Environment variables
+  - Custom domain configuration
 
 ### Frontend Documentation
 - **[FRONTEND.md](FRONTEND.md)** - Complete frontend guide
@@ -83,14 +89,14 @@ All documentation is now in the project root for easy access:
   - Updates & upgrades
 
 ### Code Improvements
-- **[IMPROVEMENTS.md](IMPROVEMENTS.md)** - Code improvement recommendations
+- **[CODE_IMPROVEMENTS.md](CODE_IMPROVEMENTS.md)** - Complete code improvement guide (consolidated)
   - Critical issues and fixes
-  - Medium priority improvements
-  - Code quality enhancements
+  - Backend improvements
+  - Frontend improvements
+  - UI improvements (links to detailed roadmap)
   - Performance optimizations
   - Security improvements
 
-### UI Improvements
 - **[UI_IMPROVEMENTS.md](UI_IMPROVEMENTS.md)** - UI improvement roadmap
   - 25 comprehensive UI improvements
   - Based on generated documentation (UI Style Guide, Mockups, etc.)
@@ -129,12 +135,13 @@ All documentation is now in the project root for easy access:
 
 ### For DevOps/Deployment
 1. [DEPLOYMENT_STRATEGY.md](DEPLOYMENT_STRATEGY.md) - **Start here** - Deployment strategy
-2. [README_PRODUCTION.md](README_PRODUCTION.md) - Overview and architecture
-3. [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) - Detailed setup steps
-4. [ORACLE_CLOUD_DEPLOYMENT.md](ORACLE_CLOUD_DEPLOYMENT.md) - Oracle Cloud deployment
-5. [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
-6. [SECURITY.md](SECURITY.md) - Security configuration
-7. [MAINTENANCE.md](MAINTENANCE.md) - Maintenance procedures
+2. [DEPLOYMENT.md](DEPLOYMENT.md) - Complete deployment guide (all platforms)
+3. [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Pre-deployment checklist
+4. [NEON_SETUP.md](NEON_SETUP.md) - Database setup
+5. [UPSTASH_SETUP.md](UPSTASH_SETUP.md) - Redis setup
+6. [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) - Frontend deployment
+7. [SECURITY.md](SECURITY.md) - Security configuration
+8. [MAINTENANCE.md](MAINTENANCE.md) - Maintenance procedures
 
 ### For UI/UX Development
 1. [UI_IMPROVEMENTS.md](UI_IMPROVEMENTS.md) - Complete UI improvement roadmap
@@ -147,7 +154,8 @@ All documentation is now in the project root for easy access:
 - **Install OmniDoc**: See [README.md - Quick Start](README.md#-quick-start)
 - **Configure the backend**: See [BACKEND.md](BACKEND.md)
 - **Understand the frontend**: See [FRONTEND.md](FRONTEND.md)
-- **Deploy to production**: See [DEPLOYMENT_STRATEGY.md](DEPLOYMENT_STRATEGY.md) first, then [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) or [ORACLE_CLOUD_DEPLOYMENT.md](ORACLE_CLOUD_DEPLOYMENT.md)
+- **Deploy to production**: See [DEPLOYMENT_STRATEGY.md](DEPLOYMENT_STRATEGY.md) first, then [DEPLOYMENT.md](DEPLOYMENT.md)
+- **Improve the code**: See [CODE_IMPROVEMENTS.md](CODE_IMPROVEMENTS.md) - Complete improvement guide
 - **Improve the UI**: See [UI_IMPROVEMENTS.md](UI_IMPROVEMENTS.md) - Complete roadmap with 25 improvements
 - **Configure security**: See [SECURITY.md](SECURITY.md)
 - **Maintain the system**: See [MAINTENANCE.md](MAINTENANCE.md)
