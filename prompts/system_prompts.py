@@ -25,6 +25,47 @@ def apply_readability_guidelines(prompt_text: str) -> str:
     """Replace {READABILITY_GUIDELINES} placeholder with actual guidelines"""
     return prompt_text.replace("{READABILITY_GUIDELINES}", READABILITY_GUIDELINES)
 
+
+# Completeness requirements to append to all prompts
+COMPLETENESS_REQUIREMENTS = """
+🚨 CRITICAL COMPLETENESS REQUIREMENTS:
+- You MUST complete ALL sections with full, detailed content - do not leave any section incomplete
+- You MUST NOT use placeholder text like '[Describe...]', '[Example:...]', '[Estimate...]', or '[Estimate Size]'
+- You MUST fill in ALL tables completely with actual data, not placeholders
+- You MUST generate specific, actionable content based on the project information provided
+- You MUST ensure the document is comprehensive and complete - do not stop mid-section
+- If a section requires examples, provide real, specific examples based on the project
+- If a section requires data or metrics, provide realistic estimates based on the project scope
+- Every section must have substantial content, not just headers or brief descriptions
+- All tables must have all rows and columns filled in with actual data
+"""
+
+
+def ensure_completeness_requirements(prompt_text: str) -> str:
+    """
+    Ensure prompt includes completeness requirements.
+    Adds them if not already present.
+    """
+    if "COMPLETENESS REQUIREMENTS" in prompt_text or "completeness" in prompt_text.lower():
+        return prompt_text
+    
+    # Add completeness requirements before the final instruction
+    if "Now, analyze" in prompt_text or "Generate the" in prompt_text or "Begin the document" in prompt_text:
+        # Insert before the final instruction
+        lines = prompt_text.split("\n")
+        last_instruction_idx = -1
+        for i in range(len(lines) - 1, -1, -1):
+            if "Now, analyze" in lines[i] or "Generate the" in lines[i] or "Begin the document" in lines[i]:
+                last_instruction_idx = i
+                break
+        
+        if last_instruction_idx >= 0:
+            lines.insert(last_instruction_idx, COMPLETENESS_REQUIREMENTS.strip())
+            return "\n".join(lines)
+    
+    # Fallback: append at the end
+    return prompt_text + "\n\n" + COMPLETENESS_REQUIREMENTS.strip()
+
 # Requirements Analyst Prompt
 REQUIREMENTS_ANALYST_PROMPT = """You are a Requirements Analyst specializing in extracting structured requirements from user ideas.
 
@@ -1646,7 +1687,7 @@ Focus on:
 Return ONLY the JSON object, nothing else."""
 
 
-def get_structured_quality_feedback_prompt(document_content: str, document_type: str, automated_scores: Optional[Dict] = None) -> str:
+def get_structured_quality_feedback_prompt(document_content: str, document_type: str, automated_scores: Optional[Dict] = None, llm_focus_questions: Optional[list] = None) -> str:
     """
     Get prompt for structured JSON quality feedback (LLM-as-Judge)
     
@@ -1654,6 +1695,7 @@ def get_structured_quality_feedback_prompt(document_content: str, document_type:
         document_content: The document content to review
         document_type: Type of document (e.g., "api_documentation")
         automated_scores: Optional automated quality scores from QualityChecker
+        llm_focus_questions: Optional list of focus questions from quality_rules.json
     
     Returns:
         Prompt string for structured JSON feedback
@@ -1666,6 +1708,15 @@ def get_structured_quality_feedback_prompt(document_content: str, document_type:
         document_preview = document_content
     
     prompt = STRUCTURED_QUALITY_FEEDBACK_PROMPT
+    
+    # Add LLM focus questions if available
+    if llm_focus_questions:
+        focus_context = "\n\n## Document-Specific Focus Questions:\n"
+        focus_context += "Pay special attention to these questions when evaluating the document:\n"
+        for i, question in enumerate(llm_focus_questions, 1):
+            focus_context += f"{i}. {question}\n"
+        prompt += focus_context
+        prompt += "\nEnsure your feedback addresses these focus areas.\n"
     
     # Add automated scores context if available
     if automated_scores:
@@ -1683,6 +1734,13 @@ def get_structured_quality_feedback_prompt(document_content: str, document_type:
             cleaned_missing = [s.replace('^#+\\s+', '').replace('\\s+', ' ') for s in missing]
             score_context += f"- Missing Sections: {', '.join(cleaned_missing)}\n"
         score_context += f"- Readability: {readability_data.get('readability_score', 0):.1f} ({readability_data.get('level', 'unknown')})\n"
+        
+        # Add auto_fail violations if present
+        auto_fail = automated_scores.get('auto_fail', {})
+        if auto_fail and not auto_fail.get('auto_fail_passed', True):
+            violations = auto_fail.get('auto_fail_violations', [])
+            score_context += f"- ⚠️ AUTO-FAIL VIOLATIONS: {', '.join(violations)}\n"
+            score_context += "  These are critical issues that must be addressed.\n"
         
         prompt += score_context
         prompt += "\n\nConsider these automated metrics in your review. Focus on addressing low scores and missing sections."
@@ -2798,59 +2856,66 @@ Generate the complete Setup Guide based on Level 3 outputs (Technical Documentat
 # Marketing Plan Agent Prompt
 MARKETING_PLAN_PROMPT = """You are a Marketing Strategy Specialist. Your task is to create comprehensive marketing documentation including Go-to-Market (GTM) strategy.
 
-The document must include these sections:
+🚨 CRITICAL INSTRUCTIONS:
+- DO NOT use placeholder text like "[Describe...]", "[Estimate...]", or "[Example:...]"
+- DO NOT leave sections incomplete or with template text
+- GENERATE actual, specific content based on the project information provided
+- FILL IN all tables completely with real data, not placeholders
+- CREATE specific examples and details, not generic templates
+
+The document must include these sections with COMPLETE, SPECIFIC content:
 1. ## Executive Summary
-   - Marketing objectives
-   - Target market overview
-   - Key value propositions
+   - Marketing objectives (specific goals, not placeholders)
+   - Target market overview (actual market description)
+   - Key value propositions (specific value points)
 
-2. ## Competitive Analysis
-   - Main competitors identification
-   - Competitive advantages and disadvantages
-   - Market positioning strategy
-   - Differentiation points
+2. ## Target Audience
+   - Primary Target Audience: Provide detailed description including demographics, psychographics, and needs. Include specific examples (e.g., "Small to medium-sized businesses (SMBs) with 10-50 employees in the tech industry, seeking to improve team collaboration and project management.")
+   - Secondary Target Audience: Provide detailed description with specific examples
+   - Create a table summarizing audience segments with Size, Key Needs, and Pain Points (all fields must be filled with actual data, not "[Estimate Size]")
 
-3. ## Target User Personas (Marketing-Focused)
-   - Primary target audience
-   - Secondary target audience
-   - Demographics and psychographics
-   - Pain points and motivations
-   - How to reach each persona
+3. ## Competitive Analysis
+   - Main competitors identification (name specific competitors)
+   - Competitive advantages and disadvantages (specific comparisons)
+   - Market positioning strategy (actual positioning)
+   - Differentiation points (specific differentiators)
 
 4. ## Value Proposition & Core Messaging
-   - Primary value proposition
-   - Key messaging pillars
-   - Unique selling points (USPs)
-   - Brand positioning statement
+   - Primary value proposition (specific value statement)
+   - Key messaging pillars (actual messaging points)
+   - Unique selling points (USPs) (specific USPs)
+   - Brand positioning statement (complete statement)
 
 5. ## Marketing Channels & Tactics
-   - Digital marketing channels (SEO, SEM, social media, email, content)
-   - Traditional marketing channels (if applicable)
-   - Channel-specific strategies
-   - Budget allocation per channel
+   - Digital marketing channels (SEO, SEM, social media, email, content) with specific strategies
+   - Traditional marketing channels (if applicable) with specific tactics
+   - Channel-specific strategies (detailed strategies for each channel)
+   - Budget allocation per channel (specific percentages or amounts)
 
 6. ## Launch Strategy
-   - Pre-launch activities
-   - Launch campaign timeline
-   - Launch event/activities
-   - Post-launch follow-up
+   - Pre-launch activities (specific activities with timelines)
+   - Launch campaign timeline (actual timeline with dates)
+   - Launch event/activities (specific events)
+   - Post-launch follow-up (specific follow-up activities)
 
 7. ## Marketing Metrics & KPIs
-   - Key performance indicators
-   - Success metrics
-   - Measurement methods
-   - Reporting schedule
+   - Key performance indicators (specific KPIs)
+   - Success metrics (measurable metrics)
+   - Measurement methods (how to measure)
+   - Reporting schedule (specific schedule)
 
 Format requirements:
 - Use clear Markdown headings (## for main sections)
-- Use tables for competitive analysis and channel breakdowns
-- Include specific timelines, budgets, and metrics
+- Use tables for competitive analysis, target audience summary, and channel breakdowns
+- ALL tables must be COMPLETE with all rows and columns filled in
+- Include specific timelines, budgets, and metrics (not placeholders)
 - Be strategic and actionable
 - Base recommendations on the business model and project charter
+- DO NOT use placeholder text - generate actual content
 {READABILITY_GUIDELINES}
 
 
-Now, analyze the following project information and generate the marketing plan:"""
+Now, analyze the following project information and generate the COMPLETE marketing plan with ALL sections fully populated:"""
 
 
 # Business Model Agent Prompt
@@ -3106,7 +3171,16 @@ def get_marketing_plan_prompt(
 
 CRITICAL: Use BOTH the original project idea and requirements context AND the Project Charter and Business Model to create a comprehensive marketing plan. Base target personas, value proposition, and marketing channels on the core features and user personas from requirements, and align with the business objectives in the Charter and pricing strategy in the Business Model.
 
-Generate the complete marketing plan:"""
+🚨 COMPLETENESS REQUIREMENTS:
+- You MUST complete ALL sections with full, detailed content - do not leave any section incomplete
+- You MUST NOT use placeholder text like '[Describe...]', '[Example:...]', or '[Estimate Size]'
+- You MUST fill in ALL tables completely with actual data, not placeholders
+- You MUST generate specific, actionable content based on the project information provided
+- You MUST ensure the document is comprehensive and complete - do not stop mid-section
+- If a section requires examples, provide real, specific examples based on the project
+- If a section requires data or metrics, provide realistic estimates based on the project scope
+
+Generate the COMPLETE marketing plan with ALL sections fully populated:"""
 
 
 def get_business_model_prompt(

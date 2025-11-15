@@ -23,14 +23,15 @@ dependencies = [
     "jinja2>=3.1.2",
     "pydantic>=2.0.0",
     "requests>=2.31.0",
-    "aiohttp>=3.9.0",  # For async HTTP requests (Ollama, etc.)
-    "httpx>=0.25.0",  # Alternative async HTTP client
-    "websockets>=12.0",  # For WebSocket support in uvicorn
-    "psycopg2-binary>=2.9.0",  # PostgreSQL adapter
-    "celery>=5.3.0",  # Task queue
-    "redis>=5.0.0",  # Redis for Celery broker and caching
-    "passlib[bcrypt]>=1.7.4",  # Password hashing
-    "python-jose[cryptography]>=3.3.0",  # JWT tokens
+    "aiohttp>=3.9.0", # For async HTTP requests (Ollama, etc.)
+    "httpx>=0.25.0", # Alternative async HTTP client
+    "websockets>=12.0", # For WebSocket support in uvicorn
+    "psycopg2-binary>=2.9.0", # PostgreSQL adapter
+    "celery>=5.3.0", # Task queue
+    "redis>=5.0.0", # Redis for Celery broker and caching
+    "passlib[bcrypt]>=1.7.4", # Password hashing
+    "python-jose[cryptography]>=3.3.0", # JWT tokens
+    "slowapi>=0.1.9", # Rate limiting for FastAPI
 ]
 
 [project.optional-dependencies]
@@ -49,6 +50,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.12.0",
     "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",  # For TestClient
     "black>=23.0.0",
     "ruff>=0.1.0",
 ]

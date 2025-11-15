@@ -30,7 +30,10 @@ build/
 *.sublime-workspace
 
 # Generated documentation (keep structure, ignore generated content)
-docs
+# But allow docs/QUALITY_SCORING.md to be tracked
+docs/
+!docs/
+!docs/QUALITY_SCORING.md
 
 # Database files
 *.db
@@ -62,7 +65,14 @@ Thumbs.db
 !README_PRODUCTION.md
 !PRODUCTION_SETUP.md
 !DOCS_INDEX.md
+!BACKEND.md
+!FRONTEND.md
+!SECURITY.md
+!MAINTENANCE.md
+!IMPROVEMENTS.md
+!ORACLE_CLOUD_DEPLOYMENT.md
+!DEPLOYMENT_CHECKLIST.md
 
-
-# Documentation files (organized in docs/)
-# But allow docs/**/*.md to be tracked
+# Documentation files in docs/ (allow QUALITY_SCORING.md)
+docs/*.md
+!docs/QUALITY_SCORING.md

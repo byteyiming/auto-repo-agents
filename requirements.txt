@@ -40,6 +40,9 @@ redis>=5.0.0  # Redis for Celery broker and caching
 passlib[bcrypt]>=1.7.4  # Password hashing
 python-jose[cryptography]>=3.3.0  # JWT tokens
 
+# Rate limiting
+slowapi>=0.1.9  # Rate limiting for FastAPI
+
 # Optional but useful
 pyautogen>=0.2.0
 langchain>=0.1.0  # For context management (optional)

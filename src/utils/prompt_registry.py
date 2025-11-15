@@ -23,30 +23,73 @@ def _extract_requirements_summary(
     else:
         summary["requirements_document"] = ""
 
-    # Extract other common dependencies
-    project_charter = dependency_documents.get("project_charter")
+    # Extract other common dependencies - check all possible document IDs
+    # Project Charter
+    project_charter = (
+        dependency_documents.get("project_charter") or
+        dependency_documents.get("project_charter_doc")
+    )
     if project_charter:
         summary["project_charter_summary"] = project_charter.get("content", "")
 
-    technical_doc = dependency_documents.get("technical_documentation") or dependency_documents.get("tad")
+    # Technical Documentation
+    technical_doc = (
+        dependency_documents.get("technical_documentation") or
+        dependency_documents.get("tad") or
+        dependency_documents.get("technical_architecture_doc")
+    )
     if technical_doc:
         summary["technical_summary"] = technical_doc.get("content", "")
 
-    api_doc = dependency_documents.get("api_documentation")
+    # API Documentation
+    api_doc = (
+        dependency_documents.get("api_documentation") or
+        dependency_documents.get("api_doc")
+    )
     if api_doc:
         summary["api_summary"] = api_doc.get("content", "")
 
-    pm_doc = dependency_documents.get("pm_documentation") or dependency_documents.get("pm_management_doc")
+    # PM Documentation
+    pm_doc = (
+        dependency_documents.get("pm_documentation") or
+        dependency_documents.get("pm_management_doc") or
+        dependency_documents.get("pm_doc")
+    )
     if pm_doc:
         summary["pm_summary"] = pm_doc.get("content", "")
 
-    user_stories_doc = dependency_documents.get("user_stories")
+    # User Stories
+    user_stories_doc = (
+        dependency_documents.get("user_stories") or
+        dependency_documents.get("user_stories_doc")
+    )
     if user_stories_doc:
         summary["user_stories"] = user_stories_doc.get("content", "")
 
-    business_model_doc = dependency_documents.get("business_model")
+    # Business Model
+    business_model_doc = (
+        dependency_documents.get("business_model") or
+        dependency_documents.get("business_model_doc")
+    )
     if business_model_doc:
         summary["business_model"] = business_model_doc.get("content", "")
+
+    # WBS
+    wbs_doc = dependency_documents.get("wbs")
+    if wbs_doc:
+        summary["wbs_summary"] = wbs_doc.get("content", "")
+
+    # Database Schema
+    db_schema_doc = (
+        dependency_documents.get("database_schema") or
+        dependency_documents.get("db_schema")
+    )
+    if db_schema_doc:
+        summary["database_schema_summary"] = db_schema_doc.get("content", "")
+
+    # Include ALL dependency documents for comprehensive context
+    # This ensures specialized prompts can access any dependency they need
+    summary["all_dependencies"] = dependency_documents
 
     return summary
 
@@ -113,6 +156,11 @@ def _get_prompt_for_document(
             req_summary, req_summary.get("project_charter_summary")
         ),
         "marketing_plan": lambda: system_prompts.get_marketing_plan_prompt(
+            req_summary,
+            req_summary.get("project_charter_summary"),
+            req_summary.get("business_model"),
+        ),
+        "gtm_strategy": lambda: system_prompts.get_marketing_plan_prompt(
             req_summary,
             req_summary.get("project_charter_summary"),
             req_summary.get("business_model"),
