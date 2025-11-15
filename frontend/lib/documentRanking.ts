@@ -385,3 +385,60 @@ export function organizeByLevel(documents: DocumentTemplate[]): {
   
   return { strategic, product, developer, user, operations, crossLevel };
 }
+
+/**
+ * Organize documents by category
+ */
+export function organizeByCategory(documents: DocumentTemplate[]): {
+  [category: string]: DocumentTemplate[];
+} {
+  const organized: { [category: string]: DocumentTemplate[] } = {};
+  
+  documents.forEach((doc) => {
+    const category = doc.category || '未分类 / Uncategorized';
+    if (!organized[category]) {
+      organized[category] = [];
+    }
+    organized[category].push(doc);
+  });
+  
+  // Sort documents within each category by priority and name
+  Object.keys(organized).forEach((category) => {
+    organized[category].sort((a, b) => {
+      const priorityWeight: Record<string, number> = {
+        '高': 3, 'High': 3,
+        '中': 2, 'Medium': 2,
+        '低': 1, 'Low': 1,
+        '': 0,
+      };
+      const priorityA = priorityWeight[a.priority || ''] || 0;
+      const priorityB = priorityWeight[b.priority || ''] || 0;
+      
+      if (priorityB !== priorityA) {
+        return priorityB - priorityA;
+      }
+      
+      return a.name.localeCompare(b.name);
+    });
+  });
+  
+  return organized;
+}
+
+/**
+ * Get recommended documents based on dependencies
+ * When a document is selected, recommend its dependencies
+ */
+export function getRecommendedDocuments(
+  selectedDocId: string,
+  allDocuments: DocumentTemplate[]
+): DocumentTemplate[] {
+  const selectedDoc = allDocuments.find((d) => d.id === selectedDocId);
+  if (!selectedDoc || !selectedDoc.dependencies || selectedDoc.dependencies.length === 0) {
+    return [];
+  }
+  
+  return selectedDoc.dependencies
+    .map((depId) => allDocuments.find((d) => d.id === depId))
+    .filter((doc): doc is DocumentTemplate => doc !== undefined);
+}
