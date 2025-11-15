@@ -25,7 +25,8 @@ APP_USER=$(whoami)
 
 echo -e "${GREEN}Step 1: Installing system dependencies...${NC}"
 sudo apt-get update
-sudo apt-get install -y git curl wget build-essential postgresql postgresql-contrib redis-server
+# Note: PostgreSQL is NOT installed - we use Neon (managed PostgreSQL)
+sudo apt-get install -y git curl wget build-essential redis-server
 
 echo -e "${GREEN}Step 2: Installing Node.js 18+...${NC}"
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -34,16 +35,17 @@ sudo apt-get install -y nodejs
 echo -e "${GREEN}Step 3: Installing Python 3.9+...${NC}"
 sudo apt-get install -y python3.9 python3.9-venv python3-pip
 
-echo -e "${GREEN}Step 4: Setting up PostgreSQL...${NC}"
-read -sp "Enter PostgreSQL password for 'omnidoc' user: " DB_PASSWORD
-echo
-
-sudo -u postgres psql <<EOF
-CREATE DATABASE omnidoc;
-CREATE USER omnidoc WITH PASSWORD '$DB_PASSWORD';
-GRANT ALL PRIVILEGES ON DATABASE omnidoc TO omnidoc;
-\q
-EOF
+echo -e "${GREEN}Step 4: Configuring Neon Database (Managed PostgreSQL)...${NC}"
+echo -e "${YELLOW}We'll use Neon (https://neon.tech) for managed PostgreSQL.${NC}"
+echo -e "${YELLOW}This saves memory on your Oracle Cloud instance!${NC}"
+echo ""
+echo "Please create a Neon project at https://console.neon.tech:"
+echo "  1. Sign up/login at https://neon.tech"
+echo "  2. Create a new project"
+echo "  3. Copy the connection string (it looks like: postgresql://user:password@ep-xxx.region.neon.tech/dbname)"
+echo ""
+read -p "Enter your Neon DATABASE_URL (or press Enter to set later): " NEON_DATABASE_URL
+NEON_DATABASE_URL=${NEON_DATABASE_URL:-""}
 
 echo -e "${GREEN}Step 5: Setting up Redis...${NC}"
 read -sp "Enter Redis password: " REDIS_PASSWORD
@@ -71,40 +73,82 @@ echo -e "${GREEN}Step 7: Running setup script...${NC}"
 echo -e "${GREEN}Step 8: Configuring environment...${NC}"
 if [ ! -f .env ]; then
     echo -e "${YELLOW}Creating .env file with production settings...${NC}"
+    
+    # Use Neon DATABASE_URL if provided, otherwise use placeholder
+    if [ -n "$NEON_DATABASE_URL" ]; then
+        DB_URL="$NEON_DATABASE_URL"
+    else
+        DB_URL="postgresql://user:password@ep-xxx.region.neon.tech/dbname"
+        echo -e "${YELLOW}⚠️  Using placeholder DATABASE_URL. Please update with your Neon connection string!${NC}"
+    fi
+    
     cat > .env <<EOF
-# Database
-DATABASE_URL=postgresql://omnidoc:$DB_PASSWORD@localhost:5432/omnidoc
+# =============================================================================
+# Database Configuration (Neon - Managed PostgreSQL)
+# =============================================================================
+# Get your connection string from: https://console.neon.tech
+# Format: postgresql://user:password@ep-xxx.region.neon.tech/dbname?sslmode=require
+DATABASE_URL=$DB_URL
 
-# Redis
+# =============================================================================
+# Redis Configuration (Local)
+# =============================================================================
 REDIS_URL=redis://:$REDIS_PASSWORD@localhost:6379/0
 
-# Security
+# =============================================================================
+# Security Configuration
+# =============================================================================
 JWT_SECRET_KEY=$(openssl rand -hex 32)
 ENVIRONMENT=prod
 
-# CORS - Production domain
+# =============================================================================
+# CORS Configuration - Production Domain
+# =============================================================================
 ALLOWED_ORIGINS=https://omnidoc.info,https://www.omnidoc.info
 
-# LLM Provider (update with your API key)
+# =============================================================================
+# LLM Provider Configuration
+# =============================================================================
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Backend
+# =============================================================================
+# Backend Configuration
+# =============================================================================
 BACKEND_HOST=0.0.0.0
 BACKEND_PORT=8000
 
-# Logging
+# =============================================================================
+# Logging Configuration
+# =============================================================================
 LOG_LEVEL=INFO
 LOG_FORMAT=json
 EOF
-    echo -e "${GREEN}.env file created. Please update GEMINI_API_KEY with your actual API key.${NC}"
+    echo -e "${GREEN}.env file created.${NC}"
+    if [ -z "$NEON_DATABASE_URL" ]; then
+        echo -e "${YELLOW}⚠️  Please update DATABASE_URL with your Neon connection string!${NC}"
+    fi
+    echo -e "${YELLOW}⚠️  Please update GEMINI_API_KEY with your actual API key.${NC}"
     read -p "Press Enter to continue..."
 fi
 
-echo -e "${GREEN}Step 9: Installing Nginx...${NC}"
+echo -e "${GREEN}Step 9: Initializing database tables...${NC}"
+if [ -n "$NEON_DATABASE_URL" ] || [ -f .env ]; then
+    echo "  📦 Running database initialization script..."
+    if [ -f scripts/init_database.sh ]; then
+        chmod +x scripts/init_database.sh
+        ./scripts/init_database.sh || echo -e "${YELLOW}⚠️  Database initialization failed. You can run it manually later with: ./scripts/init_database.sh${NC}"
+    else
+        echo -e "${YELLOW}⚠️  init_database.sh not found. Tables will be created on first run.${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️  Skipping database initialization. Please set DATABASE_URL in .env first.${NC}"
+fi
+
+echo -e "${GREEN}Step 10: Installing Nginx...${NC}"
 sudo apt-get install -y nginx
 
-echo -e "${GREEN}Step 9.1: Configuring Nginx...${NC}"
+echo -e "${GREEN}Step 10.1: Configuring Nginx...${NC}"
 sudo tee /etc/nginx/sites-available/omnidoc > /dev/null <<EOF
 # Frontend (Next.js)
 server {
@@ -160,7 +204,7 @@ sudo nginx -t
 sudo systemctl restart nginx
 sudo systemctl enable nginx
 
-echo -e "${GREEN}Step 9.2: Setting up SSL with Let's Encrypt...${NC}"
+echo -e "${GREEN}Step 10.2: Setting up SSL with Let's Encrypt...${NC}"
 sudo apt-get install -y certbot python3-certbot-nginx
 echo -e "${YELLOW}Setting up SSL certificates for omnidoc.info...${NC}"
 read -p "Enter your email for Let's Encrypt notifications: " CERTBOT_EMAIL
@@ -171,13 +215,13 @@ sudo certbot --nginx -d omnidoc.info -d www.omnidoc.info -d api.omnidoc.info --n
 echo -e "${GREEN}SSL certificates configured!${NC}"
 echo -e "${GREEN}Auto-renewal is configured automatically.${NC}"
 
-echo -e "${GREEN}Step 10: Creating systemd services...${NC}"
+echo -e "${GREEN}Step 11: Creating systemd services...${NC}"
 
 # Backend service
 sudo tee /etc/systemd/system/omnidoc-backend.service > /dev/null <<EOF
 [Unit]
 Description=OmniDoc Backend API
-After=network.target postgresql.service redis.service
+After=network.target redis.service
 
 [Service]
 Type=simple
@@ -196,7 +240,7 @@ EOF
 sudo tee /etc/systemd/system/omnidoc-celery.service > /dev/null <<EOF
 [Unit]
 Description=OmniDoc Celery Worker
-After=network.target postgresql.service redis.service
+After=network.target redis.service
 
 [Service]
 Type=simple
@@ -211,22 +255,22 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-echo -e "${GREEN}Step 11: Setting up PM2 for frontend...${NC}"
+echo -e "${GREEN}Step 12: Setting up PM2 for frontend...${NC}"
 sudo npm install -g pm2
 
-echo -e "${GREEN}Step 12: Configuring firewall...${NC}"
+echo -e "${GREEN}Step 13: Configuring firewall...${NC}"
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw --force enable
 
-echo -e "${GREEN}Step 13: Enabling services...${NC}"
+echo -e "${GREEN}Step 14: Enabling services...${NC}"
 sudo systemctl daemon-reload
 sudo systemctl enable omnidoc-backend omnidoc-celery
 sudo systemctl start omnidoc-backend omnidoc-celery
 
 # Build frontend
-echo -e "${GREEN}Step 13.1: Building frontend...${NC}"
+echo -e "${GREEN}Step 14.1: Building frontend...${NC}"
 cd $APP_DIR/frontend
 
 # Create frontend .env.local with production API URL

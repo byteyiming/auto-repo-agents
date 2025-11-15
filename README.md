@@ -43,7 +43,7 @@ All generated from a simple description of your project idea!
 
 - **Python 3.9+**
 - **Node.js 18+** (for frontend)
-- **PostgreSQL** (database)
+- **PostgreSQL** (database) - **Recommended: Use [Neon](https://neon.tech) (free managed PostgreSQL)** or local PostgreSQL
 - **Redis** (for task queue and caching)
 
 ### 2. Installation
@@ -61,8 +61,10 @@ The setup script will:
 - ✅ Check all prerequisites
 - ✅ Set up Python backend environment
 - ✅ Install frontend dependencies
-- ✅ Configure PostgreSQL database
+- ✅ Configure database (local PostgreSQL or Neon)
 - ✅ Create `.env` file with defaults
+
+**💡 Tip**: For production, use [Neon](https://neon.tech) for managed PostgreSQL - it's free and saves server memory! See [Neon Setup Guide](NEON_SETUP.md)
 
 ### 3. Configuration
 
@@ -73,8 +75,13 @@ Edit `.env` file and add your API keys:
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Database (auto-configured by setup script)
+# Database
+# Option 1: Local PostgreSQL (auto-configured by setup script)
 DATABASE_URL=postgresql://localhost/omnidoc
+
+# Option 2: Neon (recommended for production - free managed PostgreSQL)
+# Get connection string from: https://console.neon.tech
+# DATABASE_URL=postgresql://user:password@ep-xxx.region.neon.tech/dbname?sslmode=require
 
 # Redis (auto-configured by setup script)
 REDIS_URL=redis://localhost:6379/0
