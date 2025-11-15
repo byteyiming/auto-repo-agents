@@ -55,7 +55,9 @@ sudo systemctl restart redis-server
 echo -e "${GREEN}Step 6: Cloning repository...${NC}"
 if [ ! -d "$APP_DIR" ]; then
     sudo mkdir -p $APP_DIR
-    sudo git clone https://github.com/yourusername/OmniDoc.git $APP_DIR
+    read -p "Enter GitHub repository URL (or press Enter for default): " REPO_URL
+    REPO_URL=${REPO_URL:-"https://github.com/yimgao/OmniDoc.git"}
+    sudo git clone $REPO_URL $APP_DIR
     sudo chown -R $APP_USER:$APP_USER $APP_DIR
 else
     echo -e "${YELLOW}Directory $APP_DIR already exists. Skipping clone.${NC}"
@@ -161,11 +163,13 @@ sudo systemctl enable nginx
 echo -e "${GREEN}Step 9.2: Setting up SSL with Let's Encrypt...${NC}"
 sudo apt-get install -y certbot python3-certbot-nginx
 echo -e "${YELLOW}Setting up SSL certificates for omnidoc.info...${NC}"
-echo "This will prompt you for email and agreement. Press Enter to continue..."
-read -p "Press Enter to start SSL setup..."
-sudo certbot --nginx -d omnidoc.info -d www.omnidoc.info -d api.omnidoc.info --non-interactive --agree-tos --email admin@omnidoc.info --redirect
+read -p "Enter your email for Let's Encrypt notifications: " CERTBOT_EMAIL
+CERTBOT_EMAIL=${CERTBOT_EMAIL:-"admin@omnidoc.info"}
+echo -e "${GREEN}Obtaining SSL certificates...${NC}"
+sudo certbot --nginx -d omnidoc.info -d www.omnidoc.info -d api.omnidoc.info --non-interactive --agree-tos --email $CERTBOT_EMAIL --redirect
 
 echo -e "${GREEN}SSL certificates configured!${NC}"
+echo -e "${GREEN}Auto-renewal is configured automatically.${NC}"
 
 echo -e "${GREEN}Step 10: Creating systemd services...${NC}"
 
