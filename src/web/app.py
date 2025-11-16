@@ -212,37 +212,36 @@ class WildcardCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         origin = request.headers.get("origin")
         
+        # Check if origin is allowed
+        allowed = False
         if origin:
-            # Check if origin matches any allowed pattern
-            allowed = False
             for pattern in ALLOWED_ORIGINS:
                 if match_origin(origin, pattern):
                     allowed = True
                     break
-            
-            if allowed:
-                response = await call_next(request)
+        
+        # Handle preflight OPTIONS request first
+        if request.method == "OPTIONS":
+            response = Response(status_code=200)
+            if allowed and origin:
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Access-Control-Allow-Credentials"] = "true"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
                 response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
-                return response
-        
-        # Handle preflight OPTIONS request
-        if request.method == "OPTIONS":
-            response = Response()
-            if origin:
-                for pattern in ALLOWED_ORIGINS:
-                    if match_origin(origin, pattern):
-                        response.headers["Access-Control-Allow-Origin"] = origin
-                        response.headers["Access-Control-Allow-Credentials"] = "true"
-                        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-                        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
-                        break
             response.headers["Access-Control-Max-Age"] = "3600"
             return response
         
-        return await call_next(request)
+        # Process actual request
+        response = await call_next(request)
+        
+        # Add CORS headers if origin is allowed
+        if allowed and origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
+        
+        return response
 
 app.add_middleware(WildcardCORSMiddleware)
 
