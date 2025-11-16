@@ -1,5 +1,6 @@
-# OmniDoc Backend Dockerfile
-# Multi-stage build for smaller image size
+# OmniDoc Dockerfile
+# Unified Dockerfile for both API server and Celery worker
+# Use Railway's "Custom Start Command" to override for Celery worker
 
 FROM python:3.10-slim as builder
 
@@ -46,13 +47,15 @@ RUN useradd -m -u 1000 appuser && \
 # Switch to non-root user
 USER appuser
 
-# Expose port
+# Expose port (for API server, Celery doesn't need it but Railway may require it)
 EXPOSE 8000
 
-# Health check
+# Health check (only for API server)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Default command (can be overridden in Azure)
+# Default command: API server
+# For Celery worker, override in Railway Settings → Deploy → Custom Start Command:
+# celery -A src.tasks.celery_app worker --loglevel=info --concurrency=1
 CMD ["gunicorn", "src.web.app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "120", "--worker-class", "uvicorn.workers.UvicornWorker"]
 

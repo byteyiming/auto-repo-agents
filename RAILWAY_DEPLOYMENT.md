@@ -28,7 +28,9 @@ Complete guide for deploying OmniDoc backend on Railway.
 **Service Settings:**
 - **Name**: `omnidoc-backend`
 - **Root Directory**: `/` (root of repository)
-- **Dockerfile Path**: `Dockerfile`
+- **Dockerfile Path**: `Dockerfile` (default, should auto-detect)
+
+**Note**: The Dockerfile defaults to running the API server. No custom start command needed for the backend.
 
 ### Step 3: Configure Environment Variables
 
@@ -104,20 +106,33 @@ BACKEND_PORT=8000
 
 ## 🔄 Setting Up Celery Worker
 
-### Option 1: Separate Service (Recommended)
+### Create Separate Service
 
 1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
-2. Select the same repository
+2. Select the same repository (same as backend)
 3. Configure:
    - **Name**: `omnidoc-celery-worker`
-   - **Dockerfile Path**: `Dockerfile.celery`
    - **Root Directory**: `/`
-4. Add the same environment variables (except CORS and JWT settings)
-5. Deploy
+   - **Dockerfile Path**: `Dockerfile` (same as backend)
 
-### Option 2: Same Service (Single Container)
+4. **Set Custom Start Command**:
+   - Go to **Settings** → **Deploy**
+   - Scroll to **"Custom Start Command"**
+   - Click **"+ Start Command"**
+   - Enter:
+     ```
+     celery -A src.tasks.celery_app worker --loglevel=info --concurrency=1
+     ```
 
-If you want to run both in one container, modify the Dockerfile to run both processes.
+5. **Configure Environment Variables**:
+   - Go to **Variables** tab
+   - Add the same environment variables as backend (except `ALLOWED_ORIGINS` and `JWT_SECRET_KEY` which are not needed for Celery)
+
+6. **Configure Port** (optional, Celery doesn't need HTTP port):
+   - Go to **Settings** → **Networking**
+   - Railway may still require a port, but Celery won't use it
+
+7. Deploy!
 
 ## 🔄 Updating Backend
 
