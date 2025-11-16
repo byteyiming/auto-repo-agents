@@ -60,7 +60,74 @@ class GeminiProvider(BaseLLMProvider):
                 self.default_model_name = model_name
                 logger.debug(f"✅ Gemini model initialized: {model_name}")
                 break
+            except google_exceptions.PermissionDenied as e:
+                # 403 - API key invalid
+                api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                logger.error(
+                    f"❌ GEMINI API KEY ERROR (403) during initialization: "
+                    f"API key appears to be invalid or expired. "
+                    f"Key preview: {api_key_preview} "
+                    f"Error: {str(e)}"
+                )
+                import sys
+                print(
+                    f"[API KEY ERROR] Gemini API key is invalid or expired (403). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}",
+                    file=sys.stderr,
+                    flush=True
+                )
+                raise RuntimeError(
+                    f"Gemini API key is invalid or expired (403 Permission Denied). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}"
+                )
+            except google_exceptions.Unauthenticated as e:
+                # 401 - API key missing or invalid
+                api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                logger.error(
+                    f"❌ GEMINI API KEY ERROR (401) during initialization: "
+                    f"API key is missing or invalid. "
+                    f"Key preview: {api_key_preview} "
+                    f"Error: {str(e)}"
+                )
+                import sys
+                print(
+                    f"[API KEY ERROR] Gemini API key is missing or invalid (401). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}",
+                    file=sys.stderr,
+                    flush=True
+                )
+                raise RuntimeError(
+                    f"Gemini API key is missing or invalid (401 Unauthenticated). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}"
+                )
             except Exception as e:
+                error_str = str(e).lower()
+                # Check if it's an API key error
+                if any(keyword in error_str for keyword in ["401", "403", "invalid api key", "authentication", "unauthorized"]):
+                    api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                    logger.error(
+                        f"❌ GEMINI API KEY ERROR during initialization: "
+                        f"API key appears to be invalid. "
+                        f"Key preview: {api_key_preview} "
+                        f"Error: {str(e)}"
+                    )
+                    import sys
+                    print(
+                        f"[API KEY ERROR] Gemini API key is not working during initialization. "
+                        f"Please check GEMINI_API_KEY in Railway Variables. "
+                        f"Error: {str(e)}",
+                        file=sys.stderr,
+                        flush=True
+                    )
+                    raise RuntimeError(
+                        f"Gemini API key is not working. "
+                        f"Please check GEMINI_API_KEY in Railway Variables. "
+                        f"Error: {str(e)}"
+                    )
                 logger.warning(f"⚠️  Failed to initialize {model_name}: {e}")
                 continue
         else:
@@ -73,7 +140,51 @@ class GeminiProvider(BaseLLMProvider):
                         self.default_model_name = model.name
                         logger.warning(f"⚠️  Using fallback model: {model.name}")
                         break
+            except google_exceptions.PermissionDenied as e:
+                # 403 - API key invalid
+                api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                logger.error(
+                    f"❌ GEMINI API KEY ERROR (403) when listing models: "
+                    f"API key appears to be invalid or expired. "
+                    f"Key preview: {api_key_preview} "
+                    f"Error: {str(e)}"
+                )
+                import sys
+                print(
+                    f"[API KEY ERROR] Gemini API key is invalid or expired (403). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}",
+                    file=sys.stderr,
+                    flush=True
+                )
+                raise RuntimeError(
+                    f"Gemini API key is invalid or expired (403 Permission Denied). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}"
+                )
             except Exception as e:
+                error_str = str(e).lower()
+                if any(keyword in error_str for keyword in ["401", "403", "invalid api key", "authentication", "unauthorized"]):
+                    api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                    logger.error(
+                        f"❌ GEMINI API KEY ERROR when listing models: "
+                        f"API key appears to be invalid. "
+                        f"Key preview: {api_key_preview} "
+                        f"Error: {str(e)}"
+                    )
+                    import sys
+                    print(
+                        f"[API KEY ERROR] Gemini API key is not working. "
+                        f"Please check GEMINI_API_KEY in Railway Variables. "
+                        f"Error: {str(e)}",
+                        file=sys.stderr,
+                        flush=True
+                    )
+                    raise RuntimeError(
+                        f"Gemini API key is not working. "
+                        f"Please check GEMINI_API_KEY in Railway Variables. "
+                        f"Error: {str(e)}"
+                    )
                 raise RuntimeError(f"Failed to initialize any Gemini model: {e}")
     
     def generate(
@@ -158,10 +269,92 @@ class GeminiProvider(BaseLLMProvider):
                         f"Please wait and try again later."
                     )
                     
+            except google_exceptions.PermissionDenied as e:
+                # 403 Permission Denied - usually means invalid API key
+                error_msg = str(e).lower()
+                api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                logger.error(
+                    f"❌ GEMINI API KEY ERROR (403 Permission Denied): "
+                    f"API key appears to be invalid or expired. "
+                    f"Key preview: {api_key_preview} "
+                    f"Error: {str(e)}"
+                )
+                # Also print to stderr for Railway visibility
+                import sys
+                print(
+                    f"[API KEY ERROR] Gemini API key is invalid or expired (403). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}",
+                    file=sys.stderr,
+                    flush=True
+                )
+                raise RuntimeError(
+                    f"Gemini API key is invalid or expired (403 Permission Denied). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}"
+                )
+            except google_exceptions.Unauthenticated as e:
+                # 401 Unauthenticated - API key missing or invalid
+                error_msg = str(e).lower()
+                api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                logger.error(
+                    f"❌ GEMINI API KEY ERROR (401 Unauthenticated): "
+                    f"API key is missing or invalid. "
+                    f"Key preview: {api_key_preview} "
+                    f"Error: {str(e)}"
+                )
+                # Also print to stderr for Railway visibility
+                import sys
+                print(
+                    f"[API KEY ERROR] Gemini API key is missing or invalid (401). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}",
+                    file=sys.stderr,
+                    flush=True
+                )
+                raise RuntimeError(
+                    f"Gemini API key is missing or invalid (401 Unauthenticated). "
+                    f"Please check GEMINI_API_KEY in Railway Variables. "
+                    f"Error: {str(e)}"
+                )
             except Exception as e:
-                # For other errors, check if it's a rate limit error by string matching
+                # For other errors, check error type
                 error_str = str(e).lower()
-                if "429" in error_str or "resource exhausted" in error_str or "rate limit" in error_str:
+                error_code = getattr(e, 'code', None) if hasattr(e, 'code') else None
+                
+                # Check for API key related errors
+                api_key_errors = [
+                    "401", "403", "invalid api key", "invalid api_key", "authentication",
+                    "unauthorized", "permission denied", "api key not found",
+                    "invalid credentials", "authentication failed"
+                ]
+                is_api_key_error = any(err in error_str for err in api_key_errors) or error_code in [401, 403]
+                
+                if is_api_key_error:
+                    # API key error - don't retry, log clearly
+                    api_key_preview = f"{self.api_key[:10]}..." if self.api_key and len(self.api_key) > 10 else "Not set"
+                    logger.error(
+                        f"❌ GEMINI API KEY ERROR: "
+                        f"API key appears to be invalid, expired, or missing. "
+                        f"Key preview: {api_key_preview} "
+                        f"Error code: {error_code} "
+                        f"Error: {str(e)}"
+                    )
+                    # Also print to stderr for Railway visibility
+                    import sys
+                    print(
+                        f"[API KEY ERROR] Gemini API key is not working. "
+                        f"Please check GEMINI_API_KEY in Railway Variables. "
+                        f"Error code: {error_code}, Error: {str(e)}",
+                        file=sys.stderr,
+                        flush=True
+                    )
+                    raise RuntimeError(
+                        f"Gemini API key is not working. "
+                        f"Please check GEMINI_API_KEY in Railway Variables. "
+                        f"Error: {str(e)}"
+                    )
+                elif "429" in error_str or "resource exhausted" in error_str or "rate limit" in error_str:
                     # Handle as rate limit error
                     last_exception = e
                     if attempt < max_retries - 1:
