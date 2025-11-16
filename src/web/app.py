@@ -52,11 +52,41 @@ logger = get_logger(__name__)
 # Request ID middleware for logging and distributed tracing
 REQUEST_ID_HEADER = "X-Request-ID"
 
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-    if origin.strip()
-]
+def match_origin(origin: str, pattern: str) -> bool:
+    """
+    Check if an origin matches a pattern, supporting wildcards.
+    
+    Examples:
+        match_origin("https://omni-doc.vercel.app", "https://*.vercel.app") -> True
+        match_origin("https://omnidoc.info", "https://omnidoc.info") -> True
+    """
+    if origin == pattern:
+        return True
+    
+    # Support wildcard patterns like https://*.vercel.app
+    if "*" in pattern:
+        # Replace * with regex pattern
+        import re
+        pattern_regex = pattern.replace(".", r"\.").replace("*", r".+")
+        return bool(re.match(f"^{pattern_regex}$", origin))
+    
+    return False
+
+
+def get_allowed_origins() -> list[str]:
+    """
+    Get allowed origins, expanding wildcard patterns.
+    """
+    origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+    origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
+    
+    # Log allowed origins (mask sensitive parts)
+    logger.info(f"CORS allowed origins: {[o[:30] + '...' if len(o) > 30 else o for o in origins]}")
+    
+    return origins
+
+
+ALLOWED_ORIGINS = get_allowed_origins()
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -173,13 +203,49 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Custom CORS middleware to support wildcard patterns
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class WildcardCORSMiddleware(BaseHTTPMiddleware):
+    """CORS middleware that supports wildcard patterns in allowed origins."""
+    
+    async def dispatch(self, request, call_next):
+        origin = request.headers.get("origin")
+        
+        if origin:
+            # Check if origin matches any allowed pattern
+            allowed = False
+            for pattern in ALLOWED_ORIGINS:
+                if match_origin(origin, pattern):
+                    allowed = True
+                    break
+            
+            if allowed:
+                response = await call_next(request)
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
+                return response
+        
+        # Handle preflight OPTIONS request
+        if request.method == "OPTIONS":
+            response = Response()
+            if origin:
+                for pattern in ALLOWED_ORIGINS:
+                    if match_origin(origin, pattern):
+                        response.headers["Access-Control-Allow-Origin"] = origin
+                        response.headers["Access-Control-Allow-Credentials"] = "true"
+                        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
+                        break
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+        
+        return await call_next(request)
+
+app.add_middleware(WildcardCORSMiddleware)
 
 
 @app.middleware("http")
