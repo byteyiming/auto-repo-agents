@@ -1,6 +1,7 @@
 """Project-related API endpoints"""
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,7 @@ from src.config.document_catalog import get_document_by_id
 from src.context.context_manager import ContextManager
 from src.utils.logger import get_logger
 from src.tasks.generation_tasks import generate_documents_task
-from src.tasks.celery_app import REDIS_AVAILABLE
+from src.tasks.celery_app import REDIS_AVAILABLE, check_redis_available
 from src.web.utils import parse_json_field
 
 logger = get_logger(__name__)
@@ -112,14 +113,18 @@ async def create_project(request: Request, project_request: ProjectCreateRequest
     )
 
     # Check if Redis/Celery is available before submitting task
-    if not REDIS_AVAILABLE:
+    # Re-check in case Redis became available after module load
+    redis_available = REDIS_AVAILABLE or check_redis_available()
+    if not redis_available:
         error_msg = (
-            "Redis is not available. Please start Redis server to use background task processing.\n"
-            "On macOS: brew services start redis\n"
-            "On Linux: sudo systemctl start redis\n"
-            "Or run: redis-server"
+            "Redis is not available. Please check Redis connection.\n"
+            f"Redis URL: {os.getenv('REDIS_URL', 'Not set')[:50]}...\n"
+            "For Upstash Redis, ensure SSL/TLS is configured correctly."
         )
-        logger.error(f"Redis not available for project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
+        logger.error(
+            f"Redis not available for project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]. "
+            f"Redis URL: {os.getenv('REDIS_URL', 'Not set')}"
+        )
         raise HTTPException(
             status_code=503,
             detail=error_msg
