@@ -96,7 +96,8 @@ def validate_environment() -> None:
         else:
             # Log that variable exists (but not the full value for security)
             logger.info(f"✓ {var} is set (length: {len(value)})")
-        
+    
+    if missing:
         error_msg = (
             "Missing required environment variables:\n"
             + "\n".join(f"  - {var}" for var in missing)
