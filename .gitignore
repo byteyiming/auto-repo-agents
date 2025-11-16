@@ -61,7 +61,8 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Markdown files (except README.md)
+# Markdown files (except README.md and .github/copilot-instructions.md)
 *.md
 !README.md
+!/.github/copilot-instructions.md
 docs/*.md
