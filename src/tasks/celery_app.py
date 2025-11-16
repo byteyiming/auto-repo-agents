@@ -33,10 +33,11 @@ import os
 from celery import Celery
 import redis
 import ssl  # 导入 ssl 模块
+from urllib.parse import urlparse  # 导入 urlparse
 
 # Get Redis URL from environment or use default
 # Environment variable allows configuration without code changes
-REDIS_URL = os.getenv("REDIS_URL", "rediss://default:AXVjAAIncDJlNDY0OGUwNzdkMjc0M2U5OGE2Yzg4ZGUzYWU3YWVlZXAyMzAwNTE@right-loon-30051.upstash.io:6379")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 
 def check_redis_available() -> bool:
@@ -59,19 +60,33 @@ def check_redis_available() -> bool:
                 test_url = test_url.replace("redis://", "rediss://", 1)
         
         # *** 修复 ***
-        # 如果使用 rediss:// 并且缺少参数，则添加 ssl_cert_reqs=CERT_NONE
-        # 这是 Celery/Redis 客户端进行 SSL 连接所必需的
-        if is_ssl and "ssl_cert_reqs" not in test_url:
-            separator = "?" if "?" not in test_url else "&"
-            test_url += f"{separator}ssl_cert_reqs=CERT_NONE"
-
-        # 尝试使用修改后的 URL 连接 Redis
-        r = redis.from_url(
-            test_url,
-            socket_connect_timeout=5,
-            socket_timeout=5,
-            decode_responses=False  # Celery needs bytes
-        )
+        # 不再使用 redis.from_url() 来避免 URL 字符串解析问题。
+        # 我们手动解析 URL 并直接实例化 redis.Redis 客户端，
+        # 这样就可以正确传递 Python ssl 常量。
+        
+        parsed_url = urlparse(test_url)
+        
+        if is_ssl:
+            r = redis.Redis(
+                host=parsed_url.hostname,
+                port=parsed_url.port or 6379, # 提供默认端口
+                password=parsed_url.password,
+                ssl=True,
+                ssl_cert_reqs=ssl.CERT_NONE, # 直接使用 ssl 常量
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                decode_responses=False  # Celery needs bytes
+            )
+        else:
+            r = redis.Redis(
+                host=parsed_url.hostname,
+                port=parsed_url.port or 6379, # 提供默认端口
+                password=parsed_url.password,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                decode_responses=False  # Celery needs bytes
+            )
+        
         r.ping()
         return True
     except Exception as e:
@@ -87,10 +102,10 @@ REDIS_AVAILABLE = check_redis_available()
 
 # Prepare Redis URL for Celery (may need SSL for Upstash)
 celery_redis_url = REDIS_URL
-is_ssl = False
+is_ssl_celery = False
 
 if "upstash.io" in REDIS_URL or REDIS_URL.startswith("rediss://"):
-    is_ssl = True
+    is_ssl_celery = True
     if not celery_redis_url.startswith("rediss://"):
         # Upstash requires SSL, convert redis:// to rediss://
         celery_redis_url = celery_redis_url.replace("redis://", "rediss://", 1)
@@ -98,10 +113,10 @@ if "upstash.io" in REDIS_URL or REDIS_URL.startswith("rediss://"):
 # *** 修复 ***
 # 如果使用 SSL (rediss://)，Celery 后端会引发 ValueError，除非
 # 提供了 ssl_cert_reqs。我们将其添加到 URL 查询字符串中。
-# 对于我们信任的托管服务（如 Upstash），使用 CERT_NONE 是常见的做法。
-if is_ssl and "ssl_cert_reqs" not in celery_redis_url:
+# redis-py URL 解析器需要字符串 'none'，而不是 'CERT_NONE'。
+if is_ssl_celery and "ssl_cert_reqs" not in celery_redis_url:
     separator = "?" if "?" not in celery_redis_url else "&"
-    celery_redis_url += f"{separator}ssl_cert_reqs=CERT_NONE"
+    celery_redis_url += f"{separator}ssl_cert_reqs=none"
 
 # Create Celery app with application name
 celery_app = Celery(
@@ -117,11 +132,8 @@ broker_transport_options = {}
 if "upstash.io" in REDIS_URL or celery_redis_url.startswith("rediss://"):
     # *** 修复 ***
     # 使用 CERT_NONE 来匹配 URL 参数。
-    # 使用 CERT_REQUIRED 并将 ssl_ca_certs=None 设为
-    # 是矛盾的。
     broker_transport_options = {
         "ssl_cert_reqs": ssl.CERT_NONE,
-        # "ssl_ca_certs": None, # 不再需要，因为 CERT_NONE 不会验证 CA
     }
 
 celery_app.conf.update(
