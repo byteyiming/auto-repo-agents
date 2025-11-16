@@ -92,11 +92,19 @@ celery_app = Celery(
 
 # Celery configuration for production use
 # SSL configuration for Upstash Redis (required for rediss://)
+import ssl
+
 broker_transport_options = {}
+backend_transport_options = {}
+
 if "upstash.io" in REDIS_URL or celery_redis_url.startswith("rediss://"):
     # For Upstash or any SSL Redis, configure SSL parameters
-    import ssl
+    # Both broker and backend need SSL configuration
     broker_transport_options = {
+        "ssl_cert_reqs": ssl.CERT_REQUIRED,
+        "ssl_ca_certs": None,  # Use system CA certificates
+    }
+    backend_transport_options = {
         "ssl_cert_reqs": ssl.CERT_REQUIRED,
         "ssl_ca_certs": None,  # Use system CA certificates
     }
@@ -124,6 +132,7 @@ celery_app.conf.update(
     
     # SSL configuration for Redis broker (Upstash requires SSL)
     broker_transport_options=broker_transport_options,
-    result_backend_transport_options=broker_transport_options,
+    # SSL configuration for Redis backend (result storage)
+    result_backend_transport_options=backend_transport_options,
 )
 
