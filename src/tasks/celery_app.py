@@ -46,11 +46,30 @@ def check_redis_available() -> bool:
         True if Redis is available, False otherwise
     """
     try:
-        # Try to connect to Redis
-        r = redis.from_url(REDIS_URL, socket_connect_timeout=2)
+        # For Upstash Redis, we need SSL support
+        # Check if URL contains upstash.io (requires SSL)
+        ssl = False
+        ssl_cert_reqs = None
+        if "upstash.io" in REDIS_URL:
+            ssl = True
+            ssl_cert_reqs = "required"
+        
+        # Try to connect to Redis with longer timeout for cloud services
+        r = redis.from_url(
+            REDIS_URL,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            ssl=ssl,
+            ssl_cert_reqs=ssl_cert_reqs,
+            decode_responses=False  # Celery needs bytes
+        )
         r.ping()
         return True
-    except (redis.ConnectionError, redis.TimeoutError, Exception):
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Redis connection failed: {type(e).__name__}: {str(e)}")
         return False
 
 
