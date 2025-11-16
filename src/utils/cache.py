@@ -14,23 +14,18 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 try:
     # For Upstash Redis, we need SSL support
     test_url = REDIS_URL
-    ssl = False
-    ssl_cert_reqs = None
     
     if "upstash.io" in REDIS_URL:
-        # Upstash requires SSL, try rediss:// first
+        # Upstash requires SSL, convert redis:// to rediss://
         if not REDIS_URL.startswith("rediss://"):
             test_url = REDIS_URL.replace("redis://", "rediss://", 1)
-        ssl = True
-        ssl_cert_reqs = "required"
     
+    # rediss:// automatically enables SSL, no need to pass ssl parameter
     redis_client = redis.from_url(
         test_url,
         decode_responses=True,
         socket_connect_timeout=5,
-        socket_timeout=5,
-        ssl=ssl,
-        ssl_cert_reqs=ssl_cert_reqs
+        socket_timeout=5
     )
     redis_client.ping()  # Test connection
     REDIS_AVAILABLE = True

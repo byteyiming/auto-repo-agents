@@ -49,23 +49,18 @@ def check_redis_available() -> bool:
         # For Upstash Redis, we need SSL support
         # Check if URL contains upstash.io (requires SSL)
         test_url = REDIS_URL
-        ssl = False
-        ssl_cert_reqs = None
         
         if "upstash.io" in REDIS_URL:
-            # Upstash requires SSL, try rediss:// first
+            # Upstash requires SSL, convert redis:// to rediss://
             if not REDIS_URL.startswith("rediss://"):
                 test_url = REDIS_URL.replace("redis://", "rediss://", 1)
-            ssl = True
-            ssl_cert_reqs = "required"
         
         # Try to connect to Redis with longer timeout for cloud services
+        # rediss:// automatically enables SSL, no need to pass ssl parameter
         r = redis.from_url(
             test_url,
             socket_connect_timeout=5,
             socket_timeout=5,
-            ssl=ssl,
-            ssl_cert_reqs=ssl_cert_reqs,
             decode_responses=False  # Celery needs bytes
         )
         r.ping()

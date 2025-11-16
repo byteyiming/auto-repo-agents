@@ -2,7 +2,7 @@
 # Go to: Railway → Your Service → Variables → Bulk Edit (or paste directly)
 
 DATABASE_URL=postgresql://neondb_owner:npg_wUg5P3SnCMcF@ep-divine-meadow-a4epnyhw-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-REDIS_URL=redis://default:AXVjAAIncDJINDY0OGUwNzdkMjc0M2U50GE2Yzg4ZGUzYWU3YWVlZXAyMzAwNTE@right-loon-30051.upstash.io:6379
+REDIS_URL=rediss://default:AXVjAAIncDJINDY0OGUwNzdkMjc0M2U50GE2Yzg4ZGUzYWU3YWVlZXAyMzAwNTE@right-loon-30051.upstash.io:6379
 UPSTASH_REDIS_REST_URL=https://right-loon-30051.upstash.io
 UPSTASH_REDIS_REST_TOKEN=AXVjAAIncDJlNDY0OGUwNzdkMjc0M2U5OGE2Yzg4ZGUzYWU3YWVlZXAyMzAwNTE
 LLM_PROVIDER=gemini
