@@ -48,15 +48,20 @@ def check_redis_available() -> bool:
     try:
         # For Upstash Redis, we need SSL support
         # Check if URL contains upstash.io (requires SSL)
+        test_url = REDIS_URL
         ssl = False
         ssl_cert_reqs = None
+        
         if "upstash.io" in REDIS_URL:
+            # Upstash requires SSL, try rediss:// first
+            if not REDIS_URL.startswith("rediss://"):
+                test_url = REDIS_URL.replace("redis://", "rediss://", 1)
             ssl = True
             ssl_cert_reqs = "required"
         
         # Try to connect to Redis with longer timeout for cloud services
         r = redis.from_url(
-            REDIS_URL,
+            test_url,
             socket_connect_timeout=5,
             socket_timeout=5,
             ssl=ssl,
@@ -76,11 +81,17 @@ def check_redis_available() -> bool:
 # Check Redis availability at module load time
 REDIS_AVAILABLE = check_redis_available()
 
+# Prepare Redis URL for Celery (may need SSL for Upstash)
+celery_redis_url = REDIS_URL
+if "upstash.io" in REDIS_URL and not REDIS_URL.startswith("rediss://"):
+    # Upstash requires SSL, convert redis:// to rediss://
+    celery_redis_url = REDIS_URL.replace("redis://", "rediss://", 1)
+
 # Create Celery app with application name
 celery_app = Celery(
     "omnidoc",
-    broker=REDIS_URL,  # Message broker for task queue
-    backend=REDIS_URL,  # Result backend for task results
+    broker=celery_redis_url,  # Message broker for task queue
+    backend=celery_redis_url,  # Result backend for task results
     include=["src.tasks.generation_tasks"],  # Task modules to include
 )
 

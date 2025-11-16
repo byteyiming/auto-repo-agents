@@ -13,14 +13,19 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 # Create Redis client (with connection pooling)
 try:
     # For Upstash Redis, we need SSL support
+    test_url = REDIS_URL
     ssl = False
     ssl_cert_reqs = None
+    
     if "upstash.io" in REDIS_URL:
+        # Upstash requires SSL, try rediss:// first
+        if not REDIS_URL.startswith("rediss://"):
+            test_url = REDIS_URL.replace("redis://", "rediss://", 1)
         ssl = True
         ssl_cert_reqs = "required"
     
     redis_client = redis.from_url(
-        REDIS_URL,
+        test_url,
         decode_responses=True,
         socket_connect_timeout=5,
         socket_timeout=5,
