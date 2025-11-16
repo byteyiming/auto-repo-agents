@@ -78,17 +78,34 @@ def validate_environment() -> None:
         "REDIS_URL": "Redis connection string (e.g., redis://...)",
     }
     
+    # Debug: Log all environment variables (mask sensitive values)
+    all_env_vars = {k: v[:20] + "..." if len(v) > 20 else v for k, v in os.environ.items() if "KEY" in k or "URL" in k or "TOKEN" in k}
+    logger.info(f"Environment variables found: {list(all_env_vars.keys())}")
+    
     missing = []
     for var, description in required_vars.items():
-        if not os.getenv(var):
+        value = os.getenv(var)
+        if not value:
             missing.append(f"{var} ({description})")
+        else:
+            # Log that variable exists (but not the full value for security)
+            logger.info(f"✓ {var} is set (length: {len(value)})")
     
     if missing:
+        # Also check if variables exist but are empty strings
+        for var in required_vars.keys():
+            raw_value = os.environ.get(var, "")
+            if raw_value == "":
+                logger.warning(f"{var} exists in os.environ but is empty string")
+            elif raw_value:
+                logger.warning(f"{var} exists but os.getenv() returned None - possible encoding issue")
+        
         error_msg = (
             "Missing required environment variables:\n"
             + "\n".join(f"  - {var}" for var in missing)
             + "\n\n"
-            + "Please set these in Railway Variables (Settings → Variables) or your .env file."
+            + "Please set these in Railway Variables (Settings → Variables) or your .env file.\n"
+            + "Make sure variables are set at the SERVICE level, not just project level."
         )
         logger.error(error_msg)
         raise ValueError(error_msg)
