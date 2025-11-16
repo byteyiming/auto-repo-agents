@@ -34,11 +34,13 @@ from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
+from starlette.exceptions import HTTPException
 
 from src.config.document_catalog import load_document_definitions
 from src.coordination.coordinator import WorkflowCoordinator
@@ -205,6 +207,54 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Global exception handler to add CORS headers to error responses
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    origin = request.headers.get("origin")
+    allowed = False
+    if origin:
+        for pattern in ALLOWED_ORIGINS:
+            if match_origin(origin, pattern):
+                allowed = True
+                break
+    
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+    
+    if allowed and origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
+    
+    return response
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin")
+    allowed = False
+    if origin:
+        for pattern in ALLOWED_ORIGINS:
+            if match_origin(origin, pattern):
+                allowed = True
+                break
+    
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+    
+    if allowed and origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Request-ID"
+    
+    return response
+
 # Custom CORS middleware to support wildcard patterns
 class WildcardCORSMiddleware(BaseHTTPMiddleware):
     """CORS middleware that supports wildcard patterns in allowed origins."""
@@ -232,9 +282,18 @@ class WildcardCORSMiddleware(BaseHTTPMiddleware):
             return response
         
         # Process actual request
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            # Even for exceptions, add CORS headers if origin is allowed
+            logger.error(f"Request failed: {e}", exc_info=True)
+            response = Response(
+                content=f'{{"detail":"Internal server error"}}',
+                status_code=500,
+                media_type="application/json"
+            )
         
-        # Add CORS headers if origin is allowed
+        # Add CORS headers if origin is allowed (for all responses including errors)
         if allowed and origin:
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
