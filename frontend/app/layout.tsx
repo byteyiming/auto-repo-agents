@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
@@ -8,11 +7,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -31,14 +28,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="dark">
       <body
-        className={`${openSans.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col antialiased bg-[#0B0F19] text-gray-200 selection:bg-indigo-500/30`}
         suppressHydrationWarning
       >
+        {/* Background Effects */}
+        <div className="fixed inset-0 z-[-1] pointer-events-none overflow-hidden">
+          <div className="absolute inset-0 bg-grid-pattern opacity-20"></div>
+          <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[100px]"></div>
+        </div>
         <ErrorBoundary>
           <Header />
-          <main className="grow">{children}</main>
+          <main className="grow relative z-10">{children}</main>
           <Footer />
         </ErrorBoundary>
         <Analytics />
