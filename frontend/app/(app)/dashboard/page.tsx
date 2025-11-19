@@ -1,15 +1,11 @@
 'use client';
-import { useState } from 'react';
 import { Bell, Plus, FileText, Bot, Clock, BarChart2 } from "lucide-react";
 import Link from 'next/link';
-import NewProjectModal from '@/components/modals/NewProjectModal';
 
 const DashboardPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <>
-      <NewProjectModal open={isModalOpen} onOpenChange={setIsModalOpen} />
       <div className="p-8 animate-in">
         {/* Header */}
         <header className="flex items-center justify-between mb-10">
@@ -26,7 +22,6 @@ const DashboardPage = () => {
               </span>
             </button>
             <button 
-              onClick={() => setIsModalOpen(true)}
               className="flex items-center space-x-2 bg-primary hover:bg-primary-hover text-white font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-primary/20"
             >
               <Plus size={20} />
@@ -41,7 +36,7 @@ const DashboardPage = () => {
           <StatCard icon={<Bot />} title="Docs Generated" value="1,240" />
           <StatCard icon={<Clock />} title="Agent Hours" value="450h" />
           <StatCard icon={<BarChart2 />} title="Avg. Quality" value="98%" />
-        </div>
+            </div>
 
         {/* Recent Projects */}
         <div>
@@ -49,8 +44,8 @@ const DashboardPage = () => {
             <h2 className="text-2xl font-bold text-white">Recent Projects</h2>
             <button className="text-sm text-gray-400 bg-card px-3 py-1.5 rounded-md hover:bg-border transition-colors">
               Sorted by Activity
-            </button>
-          </div>
+                    </button>
+                  </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ProjectCard
               initial="Q"
@@ -80,13 +75,12 @@ const DashboardPage = () => {
         </div>
         
         {/* Floating Action Button for smaller screens */}
-        <button 
-          onClick={() => setIsModalOpen(true)}
+                    <button 
           className="lg:hidden fixed bottom-6 right-6 bg-primary hover:bg-primary-hover text-white rounded-full p-4 shadow-lg shadow-primary/30"
         >
           <Plus size={24} />
-        </button>
-      </div>
+                    </button>
+                  </div>
     </>
   );
 };
@@ -100,8 +94,8 @@ const StatCard = ({ icon, title, value }: { icon: React.ReactNode; title: string
     <div>
       <p className="text-sm text-gray-400">{title}</p>
       <p className="text-2xl font-bold text-white">{value}</p>
-    </div>
-  </div>
+                    </div>
+              </div>
 );
 
 // ProjectCard Component
