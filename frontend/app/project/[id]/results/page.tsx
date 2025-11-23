@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import DocumentViewer from '@/components/DocumentViewer';
 import { getProjectDocuments, GeneratedDocument } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import Button from '@/components/ui/Button';
 
 // SWR fetcher function
 const fetcher = async (projectId: string) => {
@@ -80,12 +81,14 @@ export default function ProjectResultsPage() {
         <div className="rounded-lg bg-red-50 p-4 sm:p-6 text-red-800 max-w-md w-full">
           <div className="text-sm sm:text-base font-medium">{t('results.errorLoading')}</div>
           <div className="mt-2 text-xs sm:text-sm break-words">{errorMessage}</div>
-          <button
+          <Button
             onClick={() => router.push(`/project/${projectId}`)}
-            className="mt-4 rounded-lg bg-red-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-red-700 w-full sm:w-auto"
+            variant="primary"
+            size="medium"
+            className="mt-4 w-full sm:w-auto"
           >
             {t('results.backToStatus')}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -105,25 +108,29 @@ export default function ProjectResultsPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
               onClick={handleShare}
-              className="flex items-center space-x-1 sm:space-x-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              variant="secondary"
+              size="small"
+              className="flex items-center space-x-1 sm:space-x-2"
             >
               <span>{shareCopied ? '✓' : '🔗'}</span>
               <span>{shareCopied ? t('results.copied') : t('results.share')}</span>
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => router.push(`/project/${projectId}`)}
-              className="rounded-lg border border-gray-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
+              variant="secondary"
+              size="small"
             >
               {t('results.backToStatus')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => router.push('/')}
-              className="rounded-lg border border-gray-300 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
+              variant="secondary"
+              size="small"
             >
               {t('results.newProject')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -139,12 +146,14 @@ export default function ProjectResultsPage() {
               <div className="mt-2 text-xs sm:text-sm">
                 {t('results.stillGenerating')}
               </div>
-              <button
+              <Button
                 onClick={() => router.push(`/project/${projectId}`)}
-                className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-blue-700 w-full sm:w-auto"
+                variant="primary"
+                size="medium"
+                className="mt-4 w-full sm:w-auto"
               >
                 {t('results.viewStatus')}
-              </button>
+              </Button>
             </div>
           </div>
         )}

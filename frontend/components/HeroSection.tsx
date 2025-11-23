@@ -9,13 +9,13 @@ export default function HeroSection() {
     <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl md:text-7xl" suppressHydrationWarning>
+          <h1 className="text-[32px] font-bold tracking-tight text-[#343A40] sm:text-[40px] md:text-[48px]" suppressHydrationWarning>
             {t('hero.title')}
           </h1>
-          <p className="mt-6 text-xl leading-8 text-gray-600 sm:text-2xl" suppressHydrationWarning>
+          <p className="mt-6 text-xl leading-8 text-[#6C757D] sm:text-2xl" suppressHydrationWarning>
             {t('hero.subtitle')}
           </p>
-          <p className="mt-4 text-lg text-gray-500" suppressHydrationWarning>
+          <p className="mt-4 text-lg text-[#ADB5BD]" suppressHydrationWarning>
             {t('hero.description')}
           </p>
           

@@ -8,8 +8,38 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-open-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Color Palette from UI Style Guide */
+  --color-primary: #007BFF;
+  --color-primary-hover: #0056b3;
+  --color-secondary: #6C757D;
+  --color-secondary-hover: #545b62;
+  --color-accent: #28A745;
+  --color-accent-hover: #218838;
+  --color-neutral-light: #F8F9FA;
+  --color-neutral-medium: #ADB5BD;
+  --color-neutral-dark: #343A40;
+  --color-white: #FFFFFF;
+  
+  /* Typography - Open Sans font sizes */
+  --font-size-h1: 32px;
+  --font-size-h2: 24px;
+  --font-size-h3: 20px;
+  --font-size-body: 16px;
+  --font-size-small: 14px;
+  
+  /* Spacing - 8px based system */
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,7 +52,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-open-sans), Arial, Helvetica, sans-serif;
 }
 
 /* Markdown prose styles */

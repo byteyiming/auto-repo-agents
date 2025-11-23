@@ -43,7 +43,7 @@ export default function Header() {
             href="/"
             className="flex items-center space-x-3 transition-opacity hover:opacity-80"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#007BFF] to-[#6C757D] text-white shadow-md">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -60,8 +60,8 @@ export default function Header() {
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-gray-900">OmniDoc</span>
-              <span className="text-xs text-gray-500">AI Documentation</span>
+              <span className="text-xl font-bold text-[#343A40]">OmniDoc</span>
+              <span className="text-xs text-[#6C757D]">AI Documentation</span>
             </div>
           </Link>
         </div>
@@ -133,10 +133,10 @@ export default function Header() {
                     <button
                       key={lang}
                       onClick={() => handleLanguageChange(lang)}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors rounded-[4px] ${
                         language === lang
-                          ? 'bg-blue-50 text-blue-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-[#F8F9FA] text-[#007BFF] font-medium'
+                          : 'text-[#343A40] hover:bg-[#F8F9FA]'
                       }`}
                     >
                       {languageNames[lang]}
