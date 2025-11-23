@@ -217,12 +217,41 @@ class WebSocketManager:
         self.connection_last_pong[websocket] = time.time()
 
     async def check_connection_health(self, websocket: WebSocket, project_id: str) -> bool:
-        import time
-        current_time = time.time()
-        last_pong = self.connection_last_pong.get(websocket, current_time)
-        if current_time - last_pong > self.heartbeat_timeout:
-            return False
-        return True
+        """
+        Check if WebSocket connection is healthy.
+        
+        More resilient - allows for temporary network hiccups.
+        Returns True if connection is healthy, False otherwise.
+        """
+        try:
+            import time
+            # Check if connection is still in active connections
+            connections = self.active_connections.get(project_id, set())
+            if websocket not in connections:
+                logger.debug(f"Connection not found in active connections for project {project_id}")
+                return False
+            
+            current_time = time.time()
+            # Default to current time if never ponged (new connection)
+            last_pong = self.connection_last_pong.get(websocket, current_time)
+            time_since_pong = current_time - last_pong
+            
+            # Use 2x heartbeat timeout for more lenient health check
+            # This handles temporary network hiccups better
+            max_allowed = self.heartbeat_timeout * 2
+            
+            if time_since_pong > max_allowed:
+                logger.debug(
+                    f"Connection unhealthy for project {project_id}: "
+                    f"last pong {time_since_pong:.1f}s ago (max: {max_allowed}s)"
+                )
+                return False
+            
+            return True
+        except Exception as e:
+            # Be lenient on health check errors - assume healthy if we can't check
+            logger.debug(f"Error checking connection health (non-fatal): {e}")
+            return True
 
     async def cleanup_dead_connections(self, project_id: str) -> int:
         connections = self.active_connections.get(project_id, set())

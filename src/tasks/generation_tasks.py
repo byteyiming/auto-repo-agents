@@ -188,48 +188,53 @@ def run_document_generation_sync(
 
 def send_websocket_notification(project_id: str, message: Dict[str, Any]) -> None:
     """
-    Send WebSocket notification via Redis Pub/Sub with rate limiting and fallback.
+    Send WebSocket notification via Redis Pub/Sub with throttling, rate limiting and fallback.
     
     This works even from Celery workers because it bypasses the in-memory
     WebSocket manager of the worker process and talks directly to Redis,
     which the main API server is listening to.
     
     Features:
+    - Throttling/batching to reduce Redis connection pressure
     - Connection pooling for efficiency
     - Rate limiting to respect monthly Redis limits
     - Automatic fallback when Redis is unavailable or rate-limited
     """
     try:
         from src.utils.redis_client import get_redis_pool
+        from src.utils.notification_throttle import get_notification_throttler
         from datetime import datetime
         import json
         
         redis_pool = get_redis_pool()
         
         if redis_pool:
-            # Use pooled client with rate limiting
+            # Use throttler to batch notifications and reduce connection pressure
+            throttler = get_notification_throttler()
+            
+            # Set publish function if not already set
+            if throttler._publish_func is None:
+                def publish_func(channel: str, payload: str) -> bool:
+                    def fallback_notify():
+                        logger.warning(
+                            f"Redis unavailable/rate-limited for WebSocket notification. "
+                            f"Message queued in database for project {project_id}. "
+                            f"Frontend will receive via polling."
+                        )
+                    return redis_pool.safe_publish(channel, payload, fallback_func=fallback_notify)
+                
+                throttler.set_publish_function(publish_func)
+            
+            # Add timestamp to message
             payload = {**message, "timestamp": datetime.now().isoformat()}
             
-            # Define fallback function (log to database or skip if Redis fails)
-            def fallback_notify():
-                logger.warning(
-                    f"Redis unavailable/rate-limited for WebSocket notification. "
-                    f"Message queued in database for project {project_id}. "
-                    f"Frontend will receive via polling."
-                )
-                # Optionally: Store in database for polling fallback
-                # This is already handled by the polling mechanism in useProjectStatus.ts
+            # Add to throttler (will batch and publish automatically)
+            added = throttler.add_notification(project_id, payload)
             
-            success = redis_pool.safe_publish(
-                channel=f"projects:{project_id}:events",
-                message=json.dumps(payload),
-                fallback_func=fallback_notify
-            )
-            
-            if success:
-                logger.debug(f"✅ WebSocket notification published to Redis for project {project_id}")
+            if added:
+                logger.debug(f"✅ WebSocket notification queued for project {project_id} (will be batched)")
             else:
-                logger.debug(f"⚠️ WebSocket notification skipped (Redis rate limited) for project {project_id}")
+                logger.debug(f"⚠️ WebSocket notification throttled for project {project_id} (rate limit)")
         else:
             # No Redis available - fallback to logging
             logger.debug(
@@ -238,7 +243,7 @@ def send_websocket_notification(project_id: str, message: Dict[str, Any]) -> Non
             )
             
     except Exception as exc:
-        logger.debug(f"WebSocket notification failed: {exc}. Frontend will use polling fallback.")
+        logger.debug(f"WebSocket notification failed: {exc}. Frontend will use polling fallback.", exc_info=True)
 
 
 # Register Celery task only if Celery is available
