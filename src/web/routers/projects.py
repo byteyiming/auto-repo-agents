@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set
 
-from fastapi import APIRouter, HTTPException, Request, Query, Depends
+from fastapi import APIRouter, HTTPException, Request, Query, Depends, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from slowapi import Limiter
@@ -15,10 +15,22 @@ from slowapi import Limiter
 from src.config.document_catalog import get_document_by_id
 from src.context.context_manager import ContextManager
 from src.utils.logger import get_logger
-from src.tasks.generation_tasks import generate_documents_task
 from src.tasks.celery_app import REDIS_AVAILABLE, check_redis_available
 from src.web.utils import parse_json_field
 from src.web.dependencies import get_context_manager, ContextManagerDep
+
+# Import Celery task if available, otherwise use None
+try:
+    from src.tasks.generation_tasks import generate_documents_task, run_document_generation_sync
+    CELERY_TASK_AVAILABLE = generate_documents_task is not None
+except (ImportError, AttributeError):
+    generate_documents_task = None
+    CELERY_TASK_AVAILABLE = False
+    # Import the sync function for fallback
+    try:
+        from src.tasks.generation_tasks import run_document_generation_sync
+    except ImportError:
+        run_document_generation_sync = None
 
 logger = get_logger(__name__)
 
@@ -105,7 +117,8 @@ class ProjectDocumentsResponse(BaseModel):
 async def create_project(
     request: Request,
     project_request: ProjectCreateRequest,
-    cm: ContextManagerDep
+    cm: ContextManagerDep,
+    background_tasks: BackgroundTasks
 ) -> ProjectCreateResponse:
     """Create a new documentation project"""
     # Validate input
@@ -137,49 +150,58 @@ async def create_project(
         selected_documents=selected_documents,
     )
 
-    # Check if Redis/Celery is available before submitting task
-    # Re-check in case Redis became available after module load
+    # Try to use Celery if available, otherwise fallback to FastAPI BackgroundTasks
     redis_available = REDIS_AVAILABLE or check_redis_available()
-    if not redis_available:
-        error_msg = (
-            "Redis is not available. Please check Redis connection.\n"
-            f"Redis URL: {os.getenv('REDIS_URL', 'Not set')[:50]}...\n"
-            "For Upstash Redis, ensure SSL/TLS is configured correctly."
-        )
-        logger.error(
-            f"Redis not available for project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]. "
-            f"Redis URL: {os.getenv('REDIS_URL', 'Not set')}"
-        )
-        raise HTTPException(
-            status_code=503,
-            detail=error_msg
-        )
-
-    # Submit task to Celery queue
-    try:
-        task = generate_documents_task.delay(
+    use_celery = redis_available and CELERY_TASK_AVAILABLE and generate_documents_task is not None
+    
+    if use_celery:
+        # Submit task to Celery queue
+        try:
+            task = generate_documents_task.delay(
+                project_id=project_id,
+                user_idea=user_idea,
+                selected_documents=selected_documents,
+                provider_name=project_request.provider_name,
+                codebase_path=project_request.codebase_path,
+            )
+            
+            logger.info(f"✅ Submitted Celery task {task.id} for project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
+            import sys
+            print(f"[TASK SUBMITTED] Task ID: {task.id}, Project: {project_id}, Queue: celery", file=sys.stderr, flush=True)
+        except Exception as exc:
+            error_msg = f"Failed to submit task to Celery queue: {str(exc)}"
+            logger.warning(f"{error_msg}. Falling back to BackgroundTasks. [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
+            # Fall through to BackgroundTasks fallback
+            use_celery = False
+    
+    if not use_celery:
+        # Fallback to FastAPI BackgroundTasks when Redis/Celery unavailable
+        if not run_document_generation_sync:
+            error_msg = (
+                "Background task processing unavailable. Redis/Celery is not available.\n"
+                f"Redis URL: {os.getenv('REDIS_URL', 'Not set')[:50]}...\n"
+                "For Upstash Redis, ensure SSL/TLS is configured correctly."
+            )
+            logger.error(
+                f"Background processing unavailable for project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]"
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=error_msg
+            )
+        
+        # Use FastAPI BackgroundTasks as fallback
+        logger.info(f"⚠️ Using FastAPI BackgroundTasks for project {project_id} (Redis/Celery unavailable) [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
+        background_tasks.add_task(
+            run_document_generation_sync,
             project_id=project_id,
             user_idea=user_idea,
             selected_documents=selected_documents,
             provider_name=project_request.provider_name,
             codebase_path=project_request.codebase_path,
         )
-        
-        logger.info(f"✅ Submitted generation task {task.id} for project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
-        # Also print to stderr for Railway visibility
         import sys
-        print(f"[TASK SUBMITTED] Task ID: {task.id}, Project: {project_id}, Queue: celery", file=sys.stderr, flush=True)
-    except Exception as exc:
-        error_msg = f"Failed to submit task to Celery queue: {str(exc)}"
-        logger.error(f"{error_msg} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]", exc_info=True)
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Failed to submit task to background queue. "
-                "Please ensure Redis is running and Celery worker is started.\n"
-                f"Error: {str(exc)}"
-            )
-        )
+        print(f"[TASK SUBMITTED] Project: {project_id}, Queue: fastapi-background-tasks (fallback)", file=sys.stderr, flush=True)
 
     return ProjectCreateResponse(
         project_id=project_id,
@@ -210,7 +232,8 @@ BRICK_AND_MORTAR_DOCUMENTS = [
 async def create_brick_and_mortar_project(
     request: Request,
     project_request: BrickAndMortarProjectRequest,
-    cm: ContextManagerDep
+    cm: ContextManagerDep,
+    background_tasks: BackgroundTasks
 ) -> ProjectCreateResponse:
     """
     Create a new brick-and-mortar business documentation project.
@@ -269,55 +292,69 @@ async def create_brick_and_mortar_project(
         selected_documents=selected_documents,
     )
 
-    # Check if Redis/Celery is available
+    # Try to use Celery if available, otherwise fallback to FastAPI BackgroundTasks
     redis_available = REDIS_AVAILABLE or check_redis_available()
-    if not redis_available:
-        error_msg = (
-            "Redis is not available. Please check Redis connection.\n"
-            f"Redis URL: {os.getenv('REDIS_URL', 'Not set')[:50]}...\n"
-            "For Upstash Redis, ensure SSL/TLS is configured correctly."
-        )
-        logger.error(
-            f"Redis not available for brick-and-mortar project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]. "
-            f"Redis URL: {os.getenv('REDIS_URL', 'Not set')}"
-        )
-        raise HTTPException(
-            status_code=503,
-            detail=error_msg
-        )
-
-    # Submit task to Celery queue
-    try:
-        task = generate_documents_task.delay(
+    use_celery = redis_available and CELERY_TASK_AVAILABLE and generate_documents_task is not None
+    
+    if use_celery:
+        # Submit task to Celery queue
+        try:
+            task = generate_documents_task.delay(
+                project_id=project_id,
+                user_idea=user_idea,
+                selected_documents=selected_documents,
+                provider_name=project_request.provider_name,
+                codebase_path=None,  # Brick-and-mortar projects don't need codebase
+            )
+            
+            logger.info(
+                f"✅ Submitted brick-and-mortar Celery task {task.id} for project {project_id} "
+                f"with {len(selected_documents)} documents [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]"
+            )
+            import sys
+            print(
+                f"[BRICK-AND-MORTAR TASK SUBMITTED] Task ID: {task.id}, Project: {project_id}, "
+                f"Documents: {len(selected_documents)}, Queue: celery",
+                file=sys.stderr,
+                flush=True
+            )
+        except Exception as exc:
+            error_msg = f"Failed to submit task to Celery queue: {str(exc)}"
+            logger.warning(f"{error_msg}. Falling back to BackgroundTasks. [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
+            use_celery = False
+    
+    if not use_celery:
+        # Fallback to FastAPI BackgroundTasks when Redis/Celery unavailable
+        if not run_document_generation_sync:
+            error_msg = (
+                "Background task processing unavailable. Redis/Celery is not available.\n"
+                f"Redis URL: {os.getenv('REDIS_URL', 'Not set')[:50]}...\n"
+                "For Upstash Redis, ensure SSL/TLS is configured correctly."
+            )
+            logger.error(
+                f"Background processing unavailable for brick-and-mortar project {project_id} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]"
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=error_msg
+            )
+        
+        # Use FastAPI BackgroundTasks as fallback
+        logger.info(f"⚠️ Using FastAPI BackgroundTasks for brick-and-mortar project {project_id} (Redis/Celery unavailable) [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]")
+        background_tasks.add_task(
+            run_document_generation_sync,
             project_id=project_id,
             user_idea=user_idea,
             selected_documents=selected_documents,
             provider_name=project_request.provider_name,
-            codebase_path=None,  # Brick-and-mortar projects don't need codebase
+            codebase_path=None,
         )
-        
-        logger.info(
-            f"✅ Submitted brick-and-mortar generation task {task.id} for project {project_id} "
-            f"with {len(selected_documents)} documents [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]"
-        )
-        # Also print to stderr for Railway visibility
         import sys
         print(
-            f"[BRICK-AND-MORTAR TASK SUBMITTED] Task ID: {task.id}, Project: {project_id}, "
-            f"Documents: {len(selected_documents)}, Queue: celery",
+            f"[BRICK-AND-MORTAR TASK SUBMITTED] Project: {project_id}, "
+            f"Documents: {len(selected_documents)}, Queue: fastapi-background-tasks (fallback)",
             file=sys.stderr,
             flush=True
-        )
-    except Exception as exc:
-        error_msg = f"Failed to submit task to Celery queue: {str(exc)}"
-        logger.error(f"{error_msg} [Request-ID: {getattr(request.state, 'request_id', 'N/A')}]", exc_info=True)
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Failed to submit task to background queue. "
-                "Please ensure Redis is running and Celery worker is started.\n"
-                f"Error: {str(exc)}"
-            )
         )
 
     return ProjectCreateResponse(
