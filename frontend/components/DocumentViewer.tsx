@@ -153,8 +153,8 @@ export default function DocumentViewer({
               </button>
             ))}
           </nav>
-        </aside>
-      </div>
+        </div>
+      </aside>
 
       {/* Document Content */}
       <div 
