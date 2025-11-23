@@ -350,80 +350,80 @@ Issues Identified:
         """
         Generate a single document. Helper for parallel execution.
         """
-            definition = self.definitions.get(document_id)
-            if not definition:
+        definition = self.definitions.get(document_id)
+        if not definition:
             logger.error("Unknown document id '%s' [Project: %s]", document_id, project_id)
             raise ValueError(f"Unknown document id '{document_id}'.")
 
-            agent = self.agents.get(document_id)
-            if not agent:
-                logger.error("No agent available for document '%s' [Project: %s]", document_id, project_id)
-                raise ValueError(f"No agent available for document '{document_id}'.")
+        agent = self.agents.get(document_id)
+        if not agent:
+            logger.error("No agent available for document '%s' [Project: %s]", document_id, project_id)
+            raise ValueError(f"No agent available for document '{document_id}'.")
 
         # Build dependency payload
-            all_dependencies = get_all_dependencies(document_id)
-            
+        all_dependencies = get_all_dependencies(document_id)
+        
         # Check for missing dependencies
-            missing_dependencies = [
-                dep for dep in all_dependencies
-                if dep not in generated_docs
-            ]
-            
-            if missing_dependencies:
-                logger.warning(
+        missing_dependencies = [
+            dep for dep in all_dependencies
+            if dep not in generated_docs
+        ]
+        
+        if missing_dependencies:
+            logger.warning(
                 "⚠️ Missing dependencies for document %s: %s [Project: %s]. Continuing.",
                 document_id, missing_dependencies, project_id
             )
-                if progress_callback:
-                await progress_callback({
-                            "type": "warning",
-                            "project_id": project_id,
-                            "document_id": document_id,
-                            "name": definition.name,
-                    "message": f"Missing dependencies: {', '.join(missing_dependencies)}.",
-                            "missing_dependencies": missing_dependencies,
-                })
-            
-            dependency_payload = {
-            dep: generated_docs[dep] for dep in all_dependencies if dep in generated_docs
-            }
-            
-        # Add implicit context for certain documents
-            if not dependency_payload and document_id in ["gtm_strategy", "marketing_plan"]:
-                for useful_doc_id in ["project_charter", "business_model", "requirements"]:
-                    if useful_doc_id in generated_docs:
-                        dependency_payload[useful_doc_id] = generated_docs[useful_doc_id]
-
             if progress_callback:
+                await progress_callback({
+                    "type": "warning",
+                    "project_id": project_id,
+                    "document_id": document_id,
+                    "name": definition.name,
+                    "message": f"Missing dependencies: {', '.join(missing_dependencies)}.",
+                    "missing_dependencies": missing_dependencies,
+                })
+        
+        dependency_payload = {
+            dep: generated_docs[dep] for dep in all_dependencies if dep in generated_docs
+        }
+        
+        # Add implicit context for certain documents
+        if not dependency_payload and document_id in ["gtm_strategy", "marketing_plan"]:
+            for useful_doc_id in ["project_charter", "business_model", "requirements"]:
+                if useful_doc_id in generated_docs:
+                    dependency_payload[useful_doc_id] = generated_docs[useful_doc_id]
+
+        if progress_callback:
             await progress_callback({
-                        "type": "document_started",
-            "project_id": project_id,
-                        "document_id": document_id,
-                        "name": definition.name,
+                "type": "document_started",
+                "project_id": project_id,
+                "document_id": document_id,
+                "name": definition.name,
                 "index": str(completed_count + 1), # Approximate index
-                        "total": str(total),
+                "total": str(total),
             })
 
-            output_rel_path = f"{project_id}/{document_id}.md"
-            
-            if isinstance(agent, SpecialAgentAdapter):
-                agent.project_id = project_id
-                agent.context_manager = self.context_manager
-            
-            doc_start_time = time.time()
-            try:
+        output_rel_path = f"{project_id}/{document_id}.md"
+        
+        if isinstance(agent, SpecialAgentAdapter):
+            agent.project_id = project_id
+            agent.context_manager = self.context_manager
+        
+        doc_start_time = time.time()
+        try:
             logger.info(f"📝 Starting generation for {document_id} [Project: {project_id}]")
             document_timeout = 1800
             
-                    document_result = await asyncio.wait_for(
-                        agent.generate_and_save(
-                            user_idea=user_idea,
-                            dependency_documents=dependency_payload,
-                            output_rel_path=output_rel_path,
-                            project_id=project_id,
-                        ),
-                        timeout=document_timeout
-                    )
+            document_result = await asyncio.wait_for(
+                agent.generate_and_save(
+                    user_idea=user_idea,
+                    dependency_documents=dependency_payload,
+                    output_rel_path=output_rel_path,
+                    project_id=project_id,
+                ),
+                timeout=document_timeout
+            )
             
             # Quality Review
             original_content = document_result.get("content", "")
