@@ -50,6 +50,19 @@ class ContextManager:
         
         self.db_url = db_url
         self._lock = threading.Lock()
+        self._min_conn = min_conn
+        self._max_conn = max_conn
+        
+        # Connection statistics for monitoring
+        self._connection_stats = {
+            "total_created": 0,
+            "total_closed": 0,
+            "active_connections": 0,
+            "failed_connections": 0,
+            "pool_gets": 0,
+            "pool_puts": 0,
+            "last_warning_time": None,
+        }
         
         # Parse connection URL for pool
         try:
@@ -69,15 +82,19 @@ class ContextManager:
         self._initialize_database()
     
     def _get_connection(self):
-        """Get a database connection from pool with health check"""
+        """Get a database connection from pool with health check and monitoring"""
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 if self._connection_pool is None:
                     # Fallback to direct connection if pool failed
                     conn = psycopg2.connect(self.db_url)
+                    self._connection_stats["total_created"] += 1
+                    self._connection_stats["active_connections"] += 1
                 else:
                     conn = self._connection_pool.getconn()
+                    self._connection_stats["pool_gets"] += 1
+                    self._connection_stats["active_connections"] += 1
                 
                 # Health check: verify connection is still alive
                 if conn.closed:
@@ -88,14 +105,21 @@ class ContextManager:
                         except Exception:
                             pass
                     conn = psycopg2.connect(self.db_url) if self._connection_pool is None else self._connection_pool.getconn()
+                    if self._connection_pool is None:
+                        self._connection_stats["total_created"] += 1
+                        self._connection_stats["active_connections"] += 1
                 
                 # Test connection with a simple query
                 cursor = conn.cursor()
                 cursor.execute("SELECT 1")
                 cursor.close()
                 
+                # Check for connection pool capacity warnings
+                self._check_connection_pool_health()
+                
                 return conn
             except (psycopg2.OperationalError, psycopg2.InterfaceError, psycopg2.DatabaseError) as e:
+                self._connection_stats["failed_connections"] += 1
                 if attempt < max_retries - 1:
                     logger.warning(
                         f"Database connection failed (attempt {attempt + 1}/{max_retries}): {e}. "
@@ -108,17 +132,53 @@ class ContextManager:
                     logger.error(f"Failed to get database connection after {max_retries} attempts: {e}")
                     raise
             except Exception as e:
+                self._connection_stats["failed_connections"] += 1
                 logger.error(f"Unexpected error getting database connection: {e}")
                 raise
     
+    def _check_connection_pool_health(self):
+        """Check connection pool health and log warnings if needed"""
+        import time
+        current_time = time.time()
+        
+        # Only warn once per minute to avoid log spam
+        last_warning = self._connection_stats.get("last_warning_time")
+        if last_warning and (current_time - last_warning) < 60:
+            return
+        
+        active = self._connection_stats["active_connections"]
+        capacity_threshold = self._max_conn * 0.9  # 90% of max capacity
+        
+        if active >= capacity_threshold:
+            logger.warning(
+                "⚠️ Connection pool near capacity: %d/%d active connections (%.1f%%)",
+                active,
+                self._max_conn,
+                (active / self._max_conn) * 100
+            )
+            self._connection_stats["last_warning_time"] = current_time
+            
+            # Check for potential connection leaks
+            if active >= self._max_conn:
+                logger.error(
+                    "❌ Connection pool at maximum capacity! Possible connection leak detected. "
+                    "Stats: created=%d, closed=%d, active=%d, failed=%d",
+                    self._connection_stats["total_created"],
+                    self._connection_stats["total_closed"],
+                    active,
+                    self._connection_stats["failed_connections"]
+                )
+    
     def _put_connection(self, conn):
-        """Return a connection to the pool with health check"""
+        """Return a connection to the pool with health check and monitoring"""
         if conn is None:
             return
         
         # Check if connection is still valid before returning to pool
         if conn.closed:
             logger.debug("Connection is closed, not returning to pool")
+            self._connection_stats["total_closed"] += 1
+            self._connection_stats["active_connections"] = max(0, self._connection_stats["active_connections"] - 1)
             return
         
         if self._connection_pool is not None:
@@ -128,22 +188,55 @@ class ContextManager:
                 cursor.execute("SELECT 1")
                 cursor.close()
                 self._connection_pool.putconn(conn)
+                self._connection_stats["pool_puts"] += 1
+                self._connection_stats["active_connections"] = max(0, self._connection_stats["active_connections"] - 1)
             except (psycopg2.OperationalError, psycopg2.InterfaceError, psycopg2.DatabaseError) as e:
                 # Connection is bad, close it instead of returning to pool
                 logger.warning(f"Connection is invalid, closing instead of returning to pool: {e}")
                 try:
                     conn.close()
+                    self._connection_stats["total_closed"] += 1
+                    self._connection_stats["active_connections"] = max(0, self._connection_stats["active_connections"] - 1)
                 except Exception:
                     pass
             except Exception as e:
                 # Other errors - try to return to pool, but close if that fails
                 try:
                     self._connection_pool.putconn(conn)
+                    self._connection_stats["pool_puts"] += 1
+                    self._connection_stats["active_connections"] = max(0, self._connection_stats["active_connections"] - 1)
                 except Exception:
                     try:
                         conn.close()
+                        self._connection_stats["total_closed"] += 1
+                        self._connection_stats["active_connections"] = max(0, self._connection_stats["active_connections"] - 1)
                     except Exception:
                         pass
+        else:
+            # Direct connection mode - just close it
+            try:
+                conn.close()
+                self._connection_stats["total_closed"] += 1
+                self._connection_stats["active_connections"] = max(0, self._connection_stats["active_connections"] - 1)
+            except Exception:
+                pass
+    
+    def get_connection_stats(self) -> Dict[str, int]:
+        """
+        Get connection pool statistics for monitoring.
+        
+        Returns:
+            Dictionary with connection statistics
+        """
+        return {
+            **self._connection_stats,
+            "max_connections": self._max_conn,
+            "min_connections": self._min_conn,
+            "pool_utilization_percent": (
+                (self._connection_stats["active_connections"] / self._max_conn) * 100
+                if self._max_conn > 0 else 0
+            ),
+        }
     
     @contextmanager
     def _get_cursor(self):
@@ -1339,3 +1432,4 @@ class ContextManager:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+

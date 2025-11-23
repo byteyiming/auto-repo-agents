@@ -7,9 +7,12 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set
 
 import json
+import logging
 import os
 
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 DOCUMENT_CONFIG_ENV = "DOCUMENT_CONFIG_PATH"
 DEFAULT_CATALOG_PATH = Path("config/document_definitions.json")
@@ -217,30 +220,85 @@ def resolve_dependencies(selected_ids: Iterable[str]) -> List[str]:
     """
     Resolve dependencies for the given document IDs with topological ordering.
     Combines dependencies from both document_definitions.json and quality_rules.json.
+    
+    Enhanced features:
+    - Circular dependency detection with detailed error messages
+    - Optional dependency handling (warnings instead of errors)
+    - Missing dependency detection
+    
+    Args:
+        selected_ids: Iterable of document IDs to resolve
+        
+    Returns:
+        List of document IDs in topological order
+        
+    Raises:
+        ValueError: If circular dependency detected or unknown document ID found
     """
     definitions = load_document_definitions()
     order: List[str] = []
     visiting: Set[str] = set()
     visited: Set[str] = set()
+    cycle_path: List[str] = []  # Track cycle path for better error messages
 
-    def visit(doc_id: str) -> None:
+    def visit(doc_id: str, path: List[str] = None) -> None:
+        """Visit a document and its dependencies recursively."""
+        if path is None:
+            path = []
+        
         if doc_id in visited:
             return
         if doc_id in visiting:
-            raise ValueError(f"Dependency cycle detected involving '{doc_id}'")
+            # Circular dependency detected - build detailed error message
+            cycle_start = path.index(doc_id) if doc_id in path else 0
+            cycle = path[cycle_start:] + [doc_id]
+            raise ValueError(
+                f"Circular dependency detected: {' -> '.join(cycle)}. "
+                f"Please check dependencies in document_definitions.json and quality_rules.json."
+            )
+        
         definition = definitions.get(doc_id)
         if not definition:
-            raise ValueError(f"Unknown document id '{doc_id}'")
+            raise ValueError(
+                f"Unknown document id '{doc_id}'. "
+                f"Available document IDs: {', '.join(sorted(definitions.keys()))}"
+            )
 
         visiting.add(doc_id)
+        current_path = path + [doc_id]
+        
         # Use get_all_dependencies to get combined dependencies
-        for dep_id in get_all_dependencies(doc_id):
-            visit(dep_id)
+        all_deps = get_all_dependencies(doc_id)
+        missing_deps = [dep for dep in all_deps if dep not in definitions]
+        
+        if missing_deps:
+            # Log warning but continue (optional dependencies)
+            logger.warning(
+                "Document '%s' has dependencies that don't exist in catalog: %s. "
+                "These will be skipped.",
+                doc_id,
+                missing_deps
+            )
+        
+        # Visit only valid dependencies
+        for dep_id in all_deps:
+            if dep_id in definitions:
+                visit(dep_id, current_path)
+        
         visiting.remove(doc_id)
         visited.add(doc_id)
         order.append(doc_id)
 
-    for doc_id in dict.fromkeys(selected_ids):
+    # Validate all selected IDs exist before processing
+    selected_list = list(dict.fromkeys(selected_ids))
+    invalid_ids = [doc_id for doc_id in selected_list if doc_id not in definitions]
+    if invalid_ids:
+        raise ValueError(
+            f"Unknown document IDs in selection: {', '.join(invalid_ids)}. "
+            f"Available document IDs: {', '.join(sorted(definitions.keys()))}"
+        )
+
+    for doc_id in selected_list:
         visit(doc_id)
 
     return order

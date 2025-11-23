@@ -411,6 +411,39 @@ Issues Identified:
             from src.config.document_catalog import get_all_dependencies
             
             all_dependencies = get_all_dependencies(document_id)
+            
+            # Check for missing dependencies and handle failures
+            missing_dependencies = [
+                dep for dep in all_dependencies
+                if dep not in generated_docs
+            ]
+            
+            if missing_dependencies:
+                logger.warning(
+                    "⚠️ Missing dependencies for document %s: %s [Project: %s] [Available: %s]",
+                    document_id,
+                    missing_dependencies,
+                    project_id,
+                    list(generated_docs.keys())
+                )
+                
+                # Send WebSocket notification about missing dependencies
+                if progress_callback:
+                    await progress_callback(
+                        {
+                            "type": "warning",
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "name": definition.name,
+                            "message": f"Missing dependencies: {', '.join(missing_dependencies)}. Continuing with available dependencies.",
+                            "missing_dependencies": missing_dependencies,
+                        }
+                    )
+                
+                # Decision: Continue with available dependencies
+                # This allows documents to be generated even if some dependencies failed
+                # The quality may be affected, but the workflow continues
+            
             dependency_payload = {
                 dependency: generated_docs[dependency]
                 for dependency in all_dependencies
@@ -433,12 +466,13 @@ Issues Identified:
                         )
             
             logger.debug(
-                "Document %s dependencies: %s (from definitions: %s, from quality_rules: %s) [Available: %s] [Project: %s]",
+                "Document %s dependencies: %s (from definitions: %s, from quality_rules: %s) [Available: %s] [Missing: %s] [Project: %s]",
                 document_id,
                 all_dependencies,
                 definition.dependencies,
                 [d for d in all_dependencies if d not in definition.dependencies],
                 list(dependency_payload.keys()),
+                missing_dependencies,
                 project_id
             )
 
@@ -473,19 +507,78 @@ Issues Identified:
                 )
                 
                 logger.info(f"🟣 Coordinator: About to call agent.generate_and_save for {document_id} (agent: {type(agent).__name__})")
+                
+                # Set document generation timeout (30 minutes per document)
+                document_timeout = 1800  # 30 minutes in seconds
                 try:
-                    document_result = await agent.generate_and_save(
-                        user_idea=user_idea,
-                        dependency_documents=dependency_payload,
-                        output_rel_path=output_rel_path,
-                        project_id=project_id,
+                    document_result = await asyncio.wait_for(
+                        agent.generate_and_save(
+                            user_idea=user_idea,
+                            dependency_documents=dependency_payload,
+                            output_rel_path=output_rel_path,
+                            project_id=project_id,
+                        ),
+                        timeout=document_timeout
                     )
                     doc_elapsed = time.time() - doc_start_time
                     logger.info(f"🟣 Coordinator: agent.generate_and_save completed for {document_id} in {doc_elapsed:.2f}s")
+                except asyncio.TimeoutError:
+                    doc_elapsed = time.time() - doc_start_time
+                    error_msg = f"Document generation timeout after {doc_elapsed:.2f}s (limit: {document_timeout}s)"
+                    logger.error(f"🟣 Coordinator: agent.generate_and_save TIMEOUT for {document_id}: {error_msg}")
+                    
+                    # Send WebSocket error notification
+                    if progress_callback:
+                        await progress_callback(
+                            {
+                                "type": "error",
+                                "project_id": project_id,
+                                "document_id": document_id,
+                                "name": definition.name,
+                                "error": error_msg,
+                            }
+                        )
+                    
+                    # Decide: Skip this document and continue with others
+                    logger.warning(
+                        "⏭️ Skipping document %s due to timeout, continuing with remaining documents [Project: %s]",
+                        document_id,
+                        project_id
+                    )
+                    continue  # Skip to next document
                 except Exception as e:
                     doc_elapsed = time.time() - doc_start_time
                     logger.error(f"🟣 Coordinator: agent.generate_and_save FAILED for {document_id} after {doc_elapsed:.2f}s: {type(e).__name__}: {str(e)}", exc_info=True)
-                    raise
+                    
+                    # Send WebSocket error notification
+                    if progress_callback:
+                        await progress_callback(
+                            {
+                                "type": "error",
+                                "project_id": project_id,
+                                "document_id": document_id,
+                                "name": definition.name,
+                                "error": f"{type(e).__name__}: {str(e)}",
+                            }
+                        )
+                    
+                    # Decide: For critical documents, we might want to fail the entire project
+                    # For now, we'll skip and continue (can be made configurable)
+                    is_critical = definition.priority == "high" or document_id in ["requirements", "project_charter"]
+                    if is_critical:
+                        logger.error(
+                            "❌ Critical document %s failed, aborting project [Project: %s]",
+                            document_id,
+                            project_id
+                        )
+                        raise  # Fail the entire project for critical documents
+                    else:
+                        logger.warning(
+                            "⏭️ Skipping document %s due to error, continuing with remaining documents [Project: %s]",
+                            document_id,
+                            project_id
+                        )
+                        continue  # Skip to next document
                 doc_duration = time.time() - doc_start_time
                 content = document_result.get("content", "")
                 content_length = len(content)
