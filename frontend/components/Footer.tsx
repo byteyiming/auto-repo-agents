@@ -1,9 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
+  const [currentYear, setCurrentYear] = useState<number>(2024);
+
+  useEffect(() => {
+    // Only set the year on the client side to avoid hydration mismatch
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   return (
     <footer role="contentinfo" className="border-t border-gray-200 bg-gray-50">
