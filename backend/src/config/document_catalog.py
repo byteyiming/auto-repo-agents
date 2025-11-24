@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 DOCUMENT_CONFIG_ENV = "DOCUMENT_CONFIG_PATH"
 # Default path: backend/config/document_definitions.json (relative to project root)
-# This will be resolved relative to where the script is run from
 DEFAULT_CATALOG_PATH = Path("backend/config/document_definitions.json")
 QUALITY_RULES_PATH = Path("src/config/quality_rules.json")
 
