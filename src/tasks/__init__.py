@@ -49,9 +49,10 @@ if is_celery_worker:
         r.ping()
     except redis.exceptions.ResponseError as e:
         error_str = str(e).lower()
-        if "max requests limit exceeded" in error_str:
+        if "max requests limit exceeded" in error_str or "limit exceeded" in error_str:
             print(
-                "[CELERY WORKER] ⚠️  Redis request limit exceeded (500,000 requests).\n"
+                "[CELERY WORKER] ⚠️  Redis monthly limit exceeded.\n"
+                f"[CELERY WORKER] Error: {str(e)}\n"
                 "[CELERY WORKER] Worker cannot start until limit resets.\n"
                 "[CELERY WORKER] Main application will continue to work without background tasks.\n"
                 "[CELERY WORKER] To fix: Upgrade Upstash plan or wait for monthly limit reset.",
@@ -59,8 +60,21 @@ if is_celery_worker:
                 flush=True
             )
             # Exit gracefully with code 0 (not an error, just unavailable)
-            sys.exit(0)
-    except Exception:
+            # Use os._exit to bypass cleanup that might try Redis again
+            import os
+            os._exit(0)
+    except Exception as e:
+        # Check for limit errors in exception string representation
+        error_str = str(e).lower()
+        if "max requests limit exceeded" in error_str or "limit exceeded" in error_str:
+            print(
+                f"[CELERY WORKER] ⚠️  Redis limit exceeded (in exception): {str(e)}\n"
+                "[CELERY WORKER] Worker cannot start. Main application will continue.",
+                file=sys.stderr,
+                flush=True
+            )
+            import os
+            os._exit(0)
         # Other Redis errors - let Celery handle them
         pass
 
