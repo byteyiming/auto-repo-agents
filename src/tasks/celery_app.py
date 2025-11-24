@@ -94,14 +94,18 @@ def check_redis_available() -> bool:
     except redis.exceptions.ResponseError as e:
         # Check for specific Redis limit errors
         error_str = str(e).lower()
-        if "max requests limit exceeded" in error_str:
+        if "max requests limit exceeded" in error_str or "limit exceeded" in error_str:
             import logging
+            import sys
             logger = logging.getLogger(__name__)
-            logger.error(
-                "Redis request limit exceeded. Celery worker cannot start. "
-                "Please upgrade your Upstash plan or wait for the limit to reset. "
-                "The main application will continue to work without background tasks."
+            error_msg = (
+                f"Redis monthly limit exceeded: {str(e)}. "
+                "Celery worker cannot start. Main application will use FastAPI BackgroundTasks fallback. "
+                "Please wait for monthly limit reset or upgrade Redis plan."
             )
+            logger.error(error_msg)
+            # Print to stderr for Railway visibility
+            print(f"[REDIS LIMIT EXCEEDED] {error_msg}", file=sys.stderr, flush=True)
             # Return False so worker can handle gracefully
             return False
         else:
@@ -112,7 +116,18 @@ def check_redis_available() -> bool:
     except Exception as e:
         # Log the error for debugging
         import logging
+        import sys
         logger = logging.getLogger(__name__)
+        error_str = str(e).lower()
+        # Also check for limit errors in other exception types (string representation might contain it)
+        if "max requests limit exceeded" in error_str or "limit exceeded" in error_str:
+            error_msg = (
+                f"Redis limit exceeded (in exception): {str(e)}. "
+                "Celery worker cannot start. Main application will use FastAPI BackgroundTasks fallback."
+            )
+            logger.error(error_msg)
+            print(f"[REDIS LIMIT EXCEEDED] {error_msg}", file=sys.stderr, flush=True)
+            return False
         logger.warning(f"Redis connection failed: {type(e).__name__}: {str(e)}")
         return False
 
@@ -154,28 +169,41 @@ else:
         "Main application will use FastAPI BackgroundTasks for background job processing."
     )
 
-# Create Celery app only if Redis is available
+# Create Celery app only if Redis is available and within limits
 celery_app = None
 if celery_broker_url:
-    try:
-        celery_app = Celery(
-            "omnidoc",
-            broker=celery_broker_url,
-            backend=celery_backend_url,
-            include=["src.tasks.generation_tasks"],
-        )
-    except Exception as e:
+    # Double-check Redis is actually available before creating Celery app
+    # This prevents worker crashes during startup
+    if not check_redis_available():
         import logging
         logger = logging.getLogger(__name__)
-        error_str = str(e).lower()
-        if "max requests limit exceeded" in error_str or "no such transport" in error_str:
-            logger.warning(
-                f"Cannot create Celery app: {str(e)}. "
-                "Main application will use FastAPI BackgroundTasks as fallback."
+        logger.warning(
+            "Redis unavailable or limit exceeded. Celery app will not be created. "
+            "Main application will use FastAPI BackgroundTasks as fallback."
+        )
+        celery_broker_url = None
+        celery_backend_url = None
+    
+    if celery_broker_url:
+        try:
+            celery_app = Celery(
+                "omnidoc",
+                broker=celery_broker_url,
+                backend=celery_backend_url,
+                include=["src.tasks.generation_tasks"],
             )
-            celery_app = None
-        else:
-            raise
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            error_str = str(e).lower()
+            if "max requests limit exceeded" in error_str or "limit exceeded" in error_str or "no such transport" in error_str:
+                logger.warning(
+                    f"Cannot create Celery app: {str(e)}. "
+                    "Main application will use FastAPI BackgroundTasks as fallback."
+                )
+                celery_app = None
+            else:
+                raise
 
 # Configure Celery app only if it was created successfully
 if celery_app:
@@ -262,15 +290,23 @@ if celery_app:
                     r.ping()
                 except redis.exceptions.ResponseError as e:
                     error_str = str(e).lower()
-                    if "max requests limit exceeded" in error_str:
+                    if "max requests limit exceeded" in error_str or "limit exceeded" in error_str:
                         logger.error(
-                            "Redis request limit exceeded. Worker cannot start. "
-                            "Main application will continue without background tasks. "
-                            "To fix: Upgrade Upstash plan or wait for monthly limit reset."
+                            f"Redis monthly limit exceeded when starting worker: {str(e)}. "
+                            "Worker exiting gracefully. Main app will continue without Celery worker "
+                            "and use FastAPI BackgroundTasks fallback."
                         )
                         # Exit gracefully (only in worker process)
                         import sys
-                    sys.exit(0)
+                        import os
+                        print(
+                            f"[WORKER EXIT] Redis monthly limit exceeded. Worker exiting gracefully. "
+                            f"Main app will use FastAPI BackgroundTasks fallback.",
+                            file=sys.stderr,
+                            flush=True
+                        )
+                        # Use os._exit to bypass cleanup that might try Redis again
+                        os._exit(0)  # Exit code 0 = graceful (non-zero would cause Railway to restart)
         except Exception as e:
             logger.warning(f"Error checking Redis on worker start: {e}")
             # Don't exit - let Celery handle it
