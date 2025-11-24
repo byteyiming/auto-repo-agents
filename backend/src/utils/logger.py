@@ -7,6 +7,7 @@ Features:
 - Text format for development (easier to read)
 - Performance monitoring decorator
 - Environment-aware configuration (DEV/PROD)
+- Categorized log files (API, business logic, agents, tasks, errors, etc.)
 """
 import logging
 import os
@@ -17,9 +18,27 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Callable
 from functools import wraps
+from enum import Enum
 
 # Import configuration
 from src.config.settings import get_settings
+
+# Global error handler cache to avoid duplicates
+_error_handlers: dict[str, logging.Handler] = {}
+
+
+class LogCategory(str, Enum):
+    """Log file categories for organized logging"""
+    API = "api"                    # HTTP requests/responses, API errors
+    BUSINESS = "business"         # Business logic, coordination, workflow
+    AGENTS = "agents"             # Agent activities (generation, improvement, quality)
+    TASKS = "tasks"               # Celery background tasks
+    WEBSOCKET = "websocket"       # WebSocket connections and events
+    ERROR = "error"               # All errors across the system
+    PERFORMANCE = "performance"   # Performance metrics, slow operations
+    DATABASE = "database"         # Database operations
+    LLM = "llm"                   # LLM API calls and responses
+    GENERAL = "general"           # General application logs
 
 
 class JSONFormatter(logging.Formatter):
@@ -54,12 +73,57 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_data, ensure_ascii=False)
 
 
+def get_log_category(name: str) -> LogCategory:
+    """
+    Determine log category based on module name
+    
+    Args:
+        name: Logger name (usually __name__)
+    
+    Returns:
+        LogCategory enum value
+    """
+    name_lower = name.lower()
+    
+    # API and web routes
+    if any(x in name_lower for x in ['web.routers', 'web.app', 'web.health', 'web.monitoring']):
+        return LogCategory.API
+    
+    # Business logic and coordination
+    if any(x in name_lower for x in ['coordination', 'coordinator', 'workflow']):
+        return LogCategory.BUSINESS
+    
+    # Agents
+    if 'agents' in name_lower:
+        return LogCategory.AGENTS
+    
+    # Background tasks
+    if any(x in name_lower for x in ['tasks', 'celery', 'generation_tasks']):
+        return LogCategory.TASKS
+    
+    # WebSocket
+    if 'websocket' in name_lower:
+        return LogCategory.WEBSOCKET
+    
+    # Database
+    if any(x in name_lower for x in ['context', 'context_manager', 'database']):
+        return LogCategory.DATABASE
+    
+    # LLM providers
+    if any(x in name_lower for x in ['llm', 'provider', 'gemini', 'openai', 'ollama']):
+        return LogCategory.LLM
+    
+    # Default to general
+    return LogCategory.GENERAL
+
+
 def setup_logger(
     name: str,
     log_level: Optional[str] = None,
     log_file: Optional[str] = None,
     log_dir: Optional[str] = None,
     log_format: Optional[str] = None,
+    category: Optional[LogCategory] = None,
     force_reconfigure: bool = False
 ) -> logging.Logger:
     """
@@ -97,6 +161,9 @@ def setup_logger(
     log_format_type = log_format or settings.log_format
     log_dir_path = log_dir or settings.log_dir
     
+    # Determine category
+    log_category = category or get_log_category(name)
+    
     # Create formatters based on format type
     if log_format_type.lower() == 'json':
         detailed_formatter = JSONFormatter()
@@ -127,11 +194,12 @@ def setup_logger(
         log_path = Path(log_dir_path)
         log_path.mkdir(parents=True, exist_ok=True)
         
-        # Generate log file name if not provided
+        # Generate log file name based on category
         if not log_file:
             timestamp = datetime.now().strftime('%Y%m%d')
             env_suffix = settings.environment.value
-            log_file = f"{name.replace('.', '_')}_{env_suffix}_{timestamp}.log"
+            # Use category-based naming instead of module-based
+            log_file = f"{log_category.value}_{env_suffix}_{timestamp}.log"
         
         file_path = log_path / log_file
         
@@ -158,16 +226,46 @@ def setup_logger(
         file_handler.setLevel(logging.DEBUG)  # File logs are more detailed
         file_handler.setFormatter(detailed_formatter)
         logger.addHandler(file_handler)
+        
+        # Add shared error log handler (all ERROR and CRITICAL go to error log)
+        # Use a single shared handler per environment/day to avoid duplicates
+        error_log_key = f"error_{settings.environment.value}_{datetime.now().strftime('%Y%m%d')}"
+        
+        if error_log_key not in _error_handlers:
+            error_log_file = f"{error_log_key}.log"
+            error_file_path = log_path / error_log_file
+            
+            if is_celery_worker:
+                error_handler = logging.FileHandler(error_file_path, encoding='utf-8', mode='a')
+            else:
+                try:
+                    from logging.handlers import RotatingFileHandler
+                    error_handler = RotatingFileHandler(
+                        error_file_path,
+                        maxBytes=10*1024*1024,  # 10MB
+                        backupCount=5,
+                        encoding='utf-8'
+                    )
+                except ImportError:
+                    error_handler = logging.FileHandler(error_file_path, encoding='utf-8')
+            
+            error_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
+            error_handler.setFormatter(detailed_formatter)
+            _error_handlers[error_log_key] = error_handler
+        
+        # Add the shared error handler to this logger
+        logger.addHandler(_error_handlers[error_log_key])
     
     return logger
 
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str, category: Optional[LogCategory] = None) -> logging.Logger:
     """
     Get or create a logger instance with environment-aware configuration
     
     Args:
         name: Logger name (usually __name__)
+        category: Optional log category override (auto-detected if not provided)
     
     Returns:
         Logger instance
@@ -176,7 +274,7 @@ def get_logger(name: str) -> logging.Logger:
     
     # Configure if not already configured
     if not logger.handlers:
-        setup_logger(name)
+        setup_logger(name, category=category)
     
     return logger
 
